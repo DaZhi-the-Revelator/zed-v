@@ -1,0 +1,48 @@
+id = "v-enhanced"
+name = "V Enhanced"
+description = "V language support for Zed — powered by v-analyzer with comprehensive syntax highlighting, intelligent completions, inlay hints, code lens, and more"
+version = "0.1.0"
+schema_version = 1
+authors = ["Ouyang Dazhi <204389009+DaZhi-the-Revelator@users.noreply.github.com>"]
+repository = "https://github.com/DaZhi-the-Revelator/zed-v-enhanced"
+
+[grammars.v]
+repository = "https://github.com/DaZhi-the-Revelator/tree-sitter-zed"
+commit = "083d71653f19bca59022cf0208428bac69bcdf7f"
+
+[language_servers.v-analyzer]
+name = "v-analyzer"
+languages = ["V"]
+
+# Default settings — users can override any of these in their Zed settings.json:
+#
+#   "lsp": {
+#     "v-analyzer": {
+#       "initialization_options": {
+#         "inlay_hints": { "enable": false },
+#         "enable_semantic_tokens": "syntax",
+#         "code_lens": { "enable": false }
+#       }
+#     }
+#   }
+#
+# All settings default to enabled. Set to false / "none" to disable.
+
+[language_servers.v-analyzer.settings]
+enable_semantic_tokens = "full"
+
+[language_servers.v-analyzer.settings.inlay_hints]
+enable = true
+enable_type_hints = true
+enable_parameter_name_hints = true
+enable_range_hints = true
+enable_implicit_err_hints = true
+enable_constant_type_hints = true
+enable_enum_field_value_hints = true
+
+[language_servers.v-analyzer.settings.code_lens]
+enable = true
+enable_run_lens = true
+enable_run_tests_lens = true
+enable_inheritors_lens = true
+enable_super_interfaces_lens = true

@@ -1,0 +1,242 @@
+{
+  "Function": {
+    "prefix": "fn",
+    "body": ["fn ${1:name}(${2:params}) {", "\t${0}", "}"],
+    "description": "Function definition"
+  },
+  "Public function": {
+    "prefix": "fnpub",
+    "body": ["pub fn ${1:name}(${2:params}) {", "\t${0}", "}"],
+    "description": "Public function definition"
+  },
+  "Function with return type": {
+    "prefix": "fnr",
+    "body": ["fn ${1:name}(${2:params}) ${3:return_type} {", "\t${0}", "}"],
+    "description": "Function with return type"
+  },
+  "Function returning result": {
+    "prefix": "fnresult",
+    "body": ["fn ${1:name}(${2:params}) !${3:ReturnType} {", "\t${0}", "}"],
+    "description": "Function returning result type (!T)"
+  },
+  "Function returning option": {
+    "prefix": "fnoption",
+    "body": ["fn ${1:name}(${2:params}) ?${3:ReturnType} {", "\t${0}", "}"],
+    "description": "Function returning option type (?T)"
+  },
+  "Method": {
+    "prefix": "method",
+    "body": ["fn (${1:r} ${2:ReceiverType}) ${3:name}(${4:params}) {", "\t${0}", "}"],
+    "description": "Method on a struct (with receiver)"
+  },
+  "Public method": {
+    "prefix": "methodpub",
+    "body": ["pub fn (${1:r} ${2:ReceiverType}) ${3:name}(${4:params}) {", "\t${0}", "}"],
+    "description": "Public method on a struct"
+  },
+  "Mutable method": {
+    "prefix": "methodmut",
+    "body": ["fn (mut ${1:r} ${2:ReceiverType}) ${3:name}(${4:params}) {", "\t${0}", "}"],
+    "description": "Mutable method on a struct"
+  },
+  "Struct": {
+    "prefix": "struct",
+    "body": ["struct ${1:Name} {", "\t${2:field} ${3:type}", "}"],
+    "description": "Struct definition"
+  },
+  "Public struct": {
+    "prefix": "structpub",
+    "body": ["pub struct ${1:Name} {", "pub mut:", "\t${2:field} ${3:type}", "}"],
+    "description": "Public struct with pub mut fields"
+  },
+  "Interface": {
+    "prefix": "interface",
+    "body": ["interface ${1:Name} {", "\t${2:method_name}(${3:params}) ${4:return_type}", "}"],
+    "description": "Interface definition"
+  },
+  "Enum": {
+    "prefix": "enum",
+    "body": ["enum ${1:Name} {", "\t${2:value1}", "\t${3:value2}", "}"],
+    "description": "Enum definition"
+  },
+  "Type alias": {
+    "prefix": "typealias",
+    "body": ["type ${1:NewType} = ${2:ExistingType}"],
+    "description": "Type alias"
+  },
+  "Sum type": {
+    "prefix": "sumtype",
+    "body": ["type ${1:Name} = ${2:Type1} | ${3:Type2}"],
+    "description": "Sum type (union type)"
+  },
+  "If": {
+    "prefix": "if",
+    "body": ["if ${1:condition} {", "\t${0}", "}"],
+    "description": "If statement"
+  },
+  "If-else": {
+    "prefix": "ifelse",
+    "body": ["if ${1:condition} {", "\t${2}", "} else {", "\t${0}", "}"],
+    "description": "If-else statement"
+  },
+  "If with error unwrap": {
+    "prefix": "iferr",
+    "body": ["if ${1:val} := ${2:fn_call}() {", "\t${0}", "} else {", "\t// handle error", "}"],
+    "description": "If with option/result unwrap"
+  },
+  "Match": {
+    "prefix": "match",
+    "body": ["match ${1:value} {", "\t${2:pattern} {", "\t\t${3}", "\t}", "\telse {", "\t\t${0}", "\t}", "}"],
+    "description": "Match statement"
+  },
+  "For range": {
+    "prefix": "forrange",
+    "body": ["for ${1:i} in 0..${2:n} {", "\t${0}", "}"],
+    "description": "For loop over a range"
+  },
+  "For in": {
+    "prefix": "forin",
+    "body": ["for ${1:item} in ${2:collection} {", "\t${0}", "}"],
+    "description": "For..in loop over a collection"
+  },
+  "For in with index": {
+    "prefix": "forindex",
+    "body": ["for ${1:i}, ${2:item} in ${3:collection} {", "\t${0}", "}"],
+    "description": "For loop with index and value"
+  },
+  "For classic": {
+    "prefix": "forc",
+    "body": ["for ${1:i} := 0; ${1:i} < ${2:n}; ${1:i}++ {", "\t${0}", "}"],
+    "description": "Classic C-style for loop"
+  },
+  "Or block": {
+    "prefix": "orblock",
+    "body": ["${1:result} := ${2:fn_call}() or {", "\t${0}", "}"],
+    "description": "Or block for error/option handling"
+  },
+  "Or panic": {
+    "prefix": "orpanic",
+    "body": ["${1:result} := ${2:fn_call}() or { panic(err) }"],
+    "description": "Or block that panics on error"
+  },
+  "Or return error": {
+    "prefix": "orreterr",
+    "body": ["${1:result} := ${2:fn_call}() or { return error(err.str()) }"],
+    "description": "Or block that returns error"
+  },
+  "Defer": {
+    "prefix": "defer",
+    "body": ["defer {", "\t${0}", "}"],
+    "description": "Defer block"
+  },
+  "Go / Spawn goroutine": {
+    "prefix": "spawn",
+    "body": ["spawn ${1:fn_name}(${2:args})"],
+    "description": "Spawn a goroutine"
+  },
+  "Channel": {
+    "prefix": "chan",
+    "body": ["${1:ch} := chan ${2:Type}{cap: ${3:1}}"],
+    "description": "Create a channel"
+  },
+  "Const block": {
+    "prefix": "const",
+    "body": ["const (", "\t${1:name} = ${2:value}", ")"],
+    "description": "Const block"
+  },
+  "Module": {
+    "prefix": "module",
+    "body": ["module ${1:name}"],
+    "description": "Module declaration"
+  },
+  "Import": {
+    "prefix": "import",
+    "body": ["import ${1:module}"],
+    "description": "Import statement"
+  },
+  "Import alias": {
+    "prefix": "importas",
+    "body": ["import ${1:module} as ${2:alias}"],
+    "description": "Import with alias"
+  },
+  "Test function": {
+    "prefix": "test",
+    "body": ["fn test_${1:name}() {", "\t${2:result} := ${3:fn_call}()", "\tassert ${2:result} == ${4:expected}", "}"],
+    "description": "Test function"
+  },
+  "Assert": {
+    "prefix": "assert",
+    "body": ["assert ${1:condition}"],
+    "description": "Assert statement"
+  },
+  "Assert with message": {
+    "prefix": "assertmsg",
+    "body": ["assert ${1:condition}, '${2:message}'"],
+    "description": "Assert with custom message"
+  },
+  "Println": {
+    "prefix": "println",
+    "body": ["println(${1:value})"],
+    "description": "Print line"
+  },
+  "Print": {
+    "prefix": "print",
+    "body": ["print(${1:value})"],
+    "description": "Print without newline"
+  },
+  "Dump": {
+    "prefix": "dump",
+    "body": ["dump(${1:value})"],
+    "description": "Dump value for debugging (shows name, type, and value)"
+  },
+  "Eprintln": {
+    "prefix": "eprintln",
+    "body": ["eprintln(${1:value})"],
+    "description": "Print to stderr"
+  },
+  "Struct literal": {
+    "prefix": "structlit",
+    "body": ["${1:StructName}{", "\t${2:field}: ${3:value}", "}"],
+    "description": "Struct literal"
+  },
+  "Array literal": {
+    "prefix": "array",
+    "body": ["[${1:value1}, ${2:value2}]${3:${4:!}}"],
+    "description": "Array literal"
+  },
+  "Map literal": {
+    "prefix": "map",
+    "body": ["{", "\t'${1:key}': ${2:value}", "}"],
+    "description": "Map literal"
+  },
+  "String interpolation": {
+    "prefix": "interp",
+    "body": ["'${1:text} \\${${2:variable}}'"],
+    "description": "String interpolation"
+  },
+  "Unsafe block": {
+    "prefix": "unsafe",
+    "body": ["unsafe {", "\t${0}", "}"],
+    "description": "Unsafe block"
+  },
+  "Lock block": {
+    "prefix": "lock",
+    "body": ["lock ${1:shared_var} {", "\t${0}", "}"],
+    "description": "Lock block for shared variable"
+  },
+  "SQL query": {
+    "prefix": "sql",
+    "body": ["sql ${1:db} {", "\tselect from ${2:Table} where ${3:condition}", "}"],
+    "description": "SQL ORM query"
+  },
+  "Vweb route": {
+    "prefix": "route",
+    "body": ["['/\\${1:path}']", "pub fn (mut ${2:app} ${3:App}) ${4:handler}() vweb.Result {", "\t${0}", "\treturn app.text('${5:response}')", "}"],
+    "description": "Vweb route handler"
+  },
+  "Comment header": {
+    "prefix": "header",
+    "body": ["// ============================================================", "// ${1:Section Name}", "// ============================================================"],
+    "description": "Section comment header"
+  }
+}
