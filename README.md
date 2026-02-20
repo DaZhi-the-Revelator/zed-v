@@ -1,6 +1,6 @@
 # V Enhanced — Language Support for Zed
 
-A comprehensive V language extension for [Zed](https://zed.dev/), powered by [v-analyzer](https://github.com/vlang/v-analyzer).
+A comprehensive V language extension for [Zed](https://zed.dev/), powered by a custom fork of [v-analyzer](https://github.com/DaZhi-the-Revelator/v-analyzer) with bug fixes, enhanced hover documentation, and correct symbol renaming.
 
 ## Version
 
@@ -8,9 +8,65 @@ A comprehensive V language extension for [Zed](https://zed.dev/), powered by [v-
 
 ---
 
+## ⚠️ Important: Forked v-analyzer Required
+
+This extension requires the **forked v-analyzer** — not the upstream version. The fork contains critical fixes and feature additions that are not in the official release.
+
+### Why a Fork?
+
+The upstream v-analyzer has several bugs that cause crashes and incorrect behaviour in Zed:
+
+| Issue | Fix |
+|-------|-----|
+| Server crash on hover over any `enum` declaration | Fixed: broken C-level pointer dereference in enum field value resolution |
+| Hover over structs showed no fields | Fixed: struct documentation now renders field names, types, and access modifiers |
+| Symbol rename only updated the first occurrence | Fixed: rename now correctly searches the live open file instead of a freed re-parsed copy |
+| Build failure on V 0.5.0+ | Fixed: invalid implicit smartcasts replaced with explicit pointer casts throughout |
+
+### Installing the Forked v-analyzer
+
+Clone and build from source:
+
+```sh
+git clone https://github.com/DaZhi-the-Revelator/v-analyzer
+cd v-analyzer
+v run build.vsh
+```
+
+The build script places the binary at `./bin/v-analyzer` (or `./bin/v-analyzer.exe` on Windows). Copy it to a location on your `PATH`, for example:
+
+```sh
+# Linux / macOS
+cp bin/v-analyzer ~/.local/bin/v-analyzer
+
+# Windows (PowerShell — run from the v-analyzer directory)
+Copy-Item .\bin\v-analyzer.exe "$env:USERPROFILE\.config\v-analyzer\bin\v-analyzer.exe"
+# Ensure that directory is on your PATH
+```
+
+**Verify:**
+
+```sh
+v-analyzer --version
+# Should print: v-analyzer version 0.0.6
+```
+
+### Staying Up to Date
+
+Pull the latest fixes and rebuild:
+
+```sh
+cd v-analyzer        # your clone of the fork
+git pull
+v run build.vsh
+# then copy the binary to PATH as above
+```
+
+---
+
 ## Features
 
-All LSP intelligence is provided by v-analyzer. This extension wires every capability into Zed natively, and adds the full Zed-specific layer on top.
+All LSP intelligence is provided by the forked v-analyzer. This extension wires every capability into Zed natively and adds the full Zed-specific layer on top.
 
 ---
 
@@ -41,12 +97,14 @@ All LSP intelligence is provided by v-analyzer. This extension wires every capab
 
 - **Hover Information** — Rich markdown documentation for every symbol type:
   - Functions and methods (signature + doc comment + module name)
-  - Structs, interfaces, enums, type aliases
+  - **Structs** — renders the full struct body with fields grouped by access modifier (`pub mut`, `pub`, `mut`, private)
+  - **Enums** — renders all fields with their computed values (implicit auto-increment, explicit values, and `[flag]` bitfield binary representations)
+  - Type aliases and sum types (full `type A = B | C` signature)
   - Constants (with value and type)
   - Variables (with inferred type)
   - Parameters and receivers
   - Struct fields (with type and mutability)
-  - Enum fields (with value)
+  - Enum fields (with computed numeric value)
   - Import paths (with README content if available)
   - Generic parameters
   - Language keywords (e.g. `chan`)
@@ -71,27 +129,23 @@ All LSP intelligence is provided by v-analyzer. This extension wires every capab
   - `nil` and `none` in the correct contexts
   - Module name completions
   - Top-level declaration completions
-
 - **Signature Help** — Real-time parameter hints as you type function calls:
   - Active parameter highlighted as you move through arguments
   - Retrigger support (`,` and ` ` re-trigger the hint)
   - Resolves the actual function declaration via PSI — always accurate
   - Works for all functions including stdlib and user-defined
-
 - **Find All References** — PSI-based cross-file reference search:
   - Accurate — not text search, uses the program structure index
   - Works across modules and into the stdlib
   - Skips false positives in comments and strings automatically
-
-- **Rename Symbol** — Safe symbol renaming:
+- **Rename Symbol** (`F2`) — Safe, complete symbol renaming:
   - `prepareRename` validation before any changes are made
-  - Renames across all files in the workspace
-  - Correctly handles all reference types (declaration, usage, field access)
-
+  - Finds every occurrence in the live open file using its in-memory parse tree — no stale positions
+  - Correctly handles all reference types (declaration, usage, field access, method calls)
+  - Works for: local variables, parameters, functions, methods, structs, enums, constants, type aliases
 - **Document Formatting** — Via `v fmt`:
   - Always produces idiomatic, correctly indented V code
   - Handles the full V syntax including generics, attributes, and C interop
-
 - **Folding Ranges** — Code folding for:
   - Function bodies
   - Struct, interface, and enum bodies
@@ -99,7 +153,6 @@ All LSP intelligence is provided by v-analyzer. This extension wires every capab
   - `for` loops
   - `match` expressions
   - All `{ }` block constructs
-
 - **Document Symbols** — Full nested symbol tree in the outline panel:
   - Functions and methods (with signature as detail)
   - Structs (with their fields nested inside)
@@ -107,46 +160,149 @@ All LSP intelligence is provided by v-analyzer. This extension wires every capab
   - Enums (with their values nested inside, showing implicit values)
   - Constants (with type and value)
   - Type aliases
-
-- **Inlay Hints** — 5 types of inline annotations:
+- **Inlay Hints** — 6 types of inline annotations:
   - **Type hints** — inferred type shown after `:=` assignments: `x: int := 10`
   - **Parameter name hints** — parameter names shown before arguments in function calls
   - **Range operator hints** — `≤` and `<` shown on `..` range operators to clarify inclusivity
-  - **Implicit `err →` hints** — shown inside `or { }` blocks and `else` branches of result unwrapping, clarifying the implicit `err` variable
-  - **Enum field value hints** — implicit enum field values shown inline
+  - **Implicit `err →` hints** — shown inside `or { }` blocks and `else` branches of result unwrapping
+  - **Enum field value hints** — implicit enum field values shown inline next to each field
   - **Constant type hints** — type shown after constant declarations
-
 - **Semantic Tokens** — Enhanced syntax highlighting from the LSP layer:
   - Two-pass system for accuracy and performance:
     - Fast syntax-based pass for files over 1000 lines
-    - Accurate resolve-based pass for full semantic coloring on smaller files
+    - Accurate resolve-based pass for full semantic colouring on smaller files
   - Distinguishes user-defined functions from built-in functions
-  - Correctly colors struct names, interface names, enum names vs. primitive types
+  - Correctly colours struct names, interface names, enum names vs. primitive types
   - Read vs. write access distinction for variable highlights
-
 - **Workspace Symbols** — Global symbol search across your entire project:
   - Fully-qualified names (`module.Symbol`)
   - Searches all `.v` files via the persistent stub index
   - Fast — backed by the indexed stub cache, not a live file scan
-
 - **Document Highlights** — All occurrences of the symbol under cursor:
   - **Read access** highlighted differently from **write access**
   - Declaration sites highlighted distinctly
   - Updates instantly as you move the cursor
-
 - **Code Actions** — Compiler-integrated quick fixes and refactorings:
   - **Make Mutable** — adds `mut` to an immutable variable; triggered by `is immutable` compiler error
   - **Make Public** — adds `pub` to any declaration
   - **Add `[heap]` Attribute** — adds `[heap]` to a struct definition
   - **Add `[flag]` Attribute** — adds `[flag]` to an enum definition
-  - **Import Module** — detects an `undefined ident` compiler error and automatically inserts the correct `import` statement at the right location in the file
+  - **Import Module** — detects an `undefined ident` compiler error and automatically inserts the correct `import` statement
 
-- **Code Lens** — Inline action buttons above declarations:
-  - `▶ Run workspace` and `single file` above `fn main()`
-  - `▶ Run test` above each `fn test_*()` function
-  - `all file tests` above the first test in a file
-  - `N implementations` above interface declarations (click to show all)
-  - `implement N interfaces` above struct declarations (click to show all)
+---
+
+### ✅ Jupyter Kernel & REPL Integration
+
+V Enhanced ships a complete Jupyter kernel (`v-kernel`) that integrates with Zed's built-in REPL.
+
+#### Installing the Kernel
+
+The kernel is in the `kernel/` subdirectory of this extension. It is a separate Rust project that must be built and installed independently.
+
+**Requirements:**
+
+- Rust (install from [rustup.rs](https://rustup.rs/))
+- V compiler on your `PATH`
+- Jupyter installed (`pip install jupyter` or via conda)
+- On Linux/macOS: system ZeroMQ library
+
+```bash
+# macOS
+brew install zeromq
+
+# Ubuntu / Debian
+sudo apt install libzmq3-dev
+
+# Fedora / RHEL
+sudo dnf install zeromq-devel
+```
+
+On Windows, ZeroMQ is bundled — no extra steps needed.
+
+**Build and install:**
+
+```bat
+:: Windows
+cd kernel
+install.bat
+```
+
+```bash
+# Linux / macOS
+cd kernel
+chmod +x install.sh
+./install.sh
+```
+
+The install scripts build the kernel with `cargo build --release`, copy the binary to `~/.cargo/bin/`, and register the Jupyter kernelspec automatically.
+
+**Verify:**
+
+```sh
+jupyter kernelspec list
+# Should show:
+#   v    /path/to/jupyter/kernels/v
+```
+
+#### Using the REPL in Zed
+
+1. Open any `.v` file
+2. Divide it into cells using `// %%` comment separators
+3. Place your cursor in a cell
+4. Press `Ctrl+Shift+Enter` (Windows/Linux) or `Cmd+Shift+Enter` (macOS) to execute the cell
+
+If the V kernel doesn't appear in Zed's kernel picker, run **"REPL: Refresh Kernelspecs"** from the command palette (`Ctrl+Shift+P`).
+
+#### How It Works
+
+`v-kernel` implements the [Jupyter messaging protocol v5.3](https://jupyter-client.readthedocs.io/en/stable/messaging.html) over ZeroMQ.
+
+**Stateful execution across cells:** top-level declarations (`fn`, `struct`, `enum`, `const`, `import`, `type`, `interface`) accumulate across cells for the duration of the session. Bare statements and expressions are automatically wrapped in `fn main()` and re-executed together with all accumulated declarations on each cell run. This mirrors how REPL kernels for other compiled languages (e.g. `evcxr` for Rust) work.
+
+```v
+import math
+
+// %%
+
+// Cell 1 — declarations accumulate across cells
+struct Point {
+    x f64
+    y f64
+}
+
+fn distance(a Point, b Point) f64 {
+    return math.sqrt((b.x - a.x) * (b.x - a.x) + (b.y - a.y) * (b.y - a.y))
+}
+
+// %%
+
+// Cell 2 — statements run inside fn main() automatically
+p1 := Point{0, 0}
+p2 := Point{3, 4}
+println(distance(p1, p2))  // → 5.0
+
+// %%
+
+// Cell 3 — prior declarations are still in scope
+p3 := Point{6, 8}
+println(distance(p1, p3))  // → 10.0
+```
+
+#### Kernel Architecture
+
+| Component | Purpose |
+|-----------|---------|
+| ZeroMQ sockets | Jupyter wire transport (shell, iopub, stdin, control, heartbeat) |
+| HMAC-SHA256 | Message signing per the Jupyter protocol |
+| Session state | Accumulated declarations tracked across cell executions |
+| V compiler | Each cell invokes `v run` on the assembled program |
+
+#### Kernel Limitations
+
+- **No autocomplete in notebooks** — completion comes from v-analyzer via LSP, not the kernel; works in `.v` files, not in `.ipynb` notebooks
+- **Recompilation on every cell** — the full accumulated program is recompiled each time; V is fast, but long sessions accumulate more code to compile
+- **No interrupt** — `Ctrl+C` sends `interrupt_request` but the kernel does not yet forward SIGINT to the running `v` process
+- **Plain text output only** — no rich display (images, HTML, etc.); V has no equivalent of IPython's `display()` machinery
 
 ---
 
@@ -166,7 +322,7 @@ Powered by `tree_sitter_v` — v-analyzer's own battle-tested grammar — with c
 - Attributes (`@[...]`)
 - Modules and import paths
 - Struct fields and selector expressions
-- Enum fetch expressions (`Direction.left`)
+- Enum fetch expressions (`Direction.north`)
 - Global variable definitions
 - Compile-time constructs (`$if`, `$for`, `$else`)
 - Labels
@@ -320,7 +476,7 @@ Automatic bracket and quote pairing:
 
 ### ✅ Intelligent Word Selection
 
-Double-click selects complete V identifiers. V identifiers use letters, digits, and underscores — all handled correctly.
+Double-click selects complete V identifiers including underscores — `snake_case_identifier` is selected in full, not word-by-word.
 
 ---
 
@@ -368,38 +524,15 @@ All v-analyzer features can be individually enabled or disabled via your Zed `se
 | `"syntax"` | Syntax-only pass — faster, recommended for very large files |
 | `"none"` | Semantic tokens disabled entirely |
 
-**When to change settings:**
-
-- Disable `enable_type_hints` if inferred type annotations feel cluttered
-- Disable `enable_parameter_name_hints` if you find call-site labels distracting
-- Set `enable_semantic_tokens` to `"syntax"` if highlighting is slow on large files
-- Disable `code_lens` if you don't use the run/test buttons
-
 ---
 
 ## Requirements
 
-### v-analyzer
+### Forked v-analyzer (Required)
 
-This extension requires `v-analyzer` to be installed and available in your `PATH`.
+See the [Installing the Forked v-analyzer](#installing-the-forked-v-analyzer) section above.
 
-**Install:**
-
-```sh
-v download -RD https://raw.githubusercontent.com/vlang/v-analyzer/main/install.vsh
-```
-
-**Update:**
-
-```sh
-v-analyzer up
-```
-
-**Verify:**
-
-```sh
-v-analyzer --version
-```
+> **Do not use the upstream v-analyzer.** It will crash on enum hover and produce incorrect rename results.
 
 ### V Compiler
 
@@ -413,16 +546,21 @@ v-analyzer init
 
 Then set `custom_vroot` in the generated `.v-analyzer/config.toml`.
 
+### Jupyter Kernel (Optional)
+
+Required only if you want REPL/notebook support. See [Jupyter Kernel & REPL Integration](#-jupyter-kernel--repl-integration) above.
+
 ---
 
 ## Installation
 
-### From Zed Extensions Marketplace
+### ~~From Zed Extensions Marketplace~~
 
-1. Open Zed
-2. Go to Extensions (`Ctrl+Shift+X` / `Cmd+Shift+X`)
-3. Search for **V Enhanced**
-4. Click Install
+1. ~~Open Zed~~
+2. ~~Go to Extensions (`Ctrl+Shift+X` / `Cmd+Shift+X`)~~
+3. ~~Search for **V Enhanced**~~
+4. ~~Click Install~~
+5. ~~Install the forked v-analyzer (see above)~~
 
 ### Development Installation
 
@@ -442,6 +580,7 @@ Then set `custom_vroot` in the generated `.v-analyzer/config.toml`.
 3. In Zed, open Extensions (`Ctrl+Shift+X`)
 4. Click **Install Dev Extension**
 5. Select this folder
+6. Install the forked v-analyzer (see above)
 
 ---
 
@@ -491,54 +630,78 @@ A global config also exists at `~/.config/v-analyzer/config.toml` and applies to
 ## Project Structure
 
 ```txt
-zed-v-enhanced/
+v-enhanced/
 ├── extension.toml              # Extension metadata, grammar reference, default settings
 ├── Cargo.toml                  # Rust extension dependency (zed_extension_api)
 ├── build.bat                   # Windows build script
 ├── build.sh                    # Linux / macOS build script
 ├── src/
 │   └── lib.rs                  # Extension entry point — locates and launches v-analyzer
-└── languages/
-    └── v/
-        ├── config.toml         # Language settings (brackets, indent, comments, word chars)
-        ├── highlights.scm      # Comprehensive syntax highlighting queries
-        ├── brackets.scm        # Rainbow bracket pairs ({ } [ ] ( ))
-        ├── folds.scm           # Code folding queries
-        ├── outline.scm         # Breadcrumb / outline panel queries
-        ├── tags.scm            # Symbol search queries (Ctrl+T)
-        └── snippets.json       # 44 code snippets
+├── languages/
+│   └── v/
+│       ├── config.toml         # Language settings (brackets, indent, comments, word chars)
+│       ├── highlights.scm      # Comprehensive syntax highlighting queries
+│       ├── brackets.scm        # Rainbow bracket pairs ({ } [ ] ( ))
+│       ├── folds.scm           # Code folding queries
+│       ├── outline.scm         # Breadcrumb / outline panel queries
+│       ├── tags.scm            # Symbol search queries (Ctrl+T)
+│       └── snippets.json       # 44 code snippets
+└── kernel/                     # Jupyter kernel (separate Rust project)
+    ├── src/
+    │   └── main.rs             # Full kernel implementation
+    ├── kernelspec/
+    │   └── kernel.json         # Jupyter kernelspec descriptor
+    ├── Cargo.toml              # Kernel Rust dependencies
+    ├── install.bat             # Windows build + install script
+    └── install.sh              # Linux / macOS build + install script
 ```
 
 ---
 
-### Troubleshooting
+## Troubleshooting
 
-#### v-analyzer not found
+### v-analyzer not found
 
 - Confirm it is in your PATH: `where v-analyzer` (Windows) / `which v-analyzer` (Linux/Mac)
-- Install with: `v download -RD https://raw.githubusercontent.com/vlang/v-analyzer/main/install.vsh`
+- Make sure you are using **the fork**, not the upstream version
+- Build and install from: `https://github.com/DaZhi-the-Revelator/v-analyzer`
 - Restart Zed after installing
 
-#### No diagnostics / formatting not working
+### Server crashes on enum hover
+
+- You are using the upstream v-analyzer — install the fork (see above)
+
+### Rename only updates one occurrence
+
+- You are using the upstream v-analyzer — install the fork (see above)
+
+### No diagnostics / formatting not working
 
 - v-analyzer needs the V compiler: confirm `v` is in PATH or set `custom_vroot` in config
 - Run `v-analyzer init` in your project root and set `custom_vroot` in the generated config
 
-#### Indexing is slow on first open
+### Indexing is slow on first open
 
 - v-analyzer indexes your workspace and the V stdlib on first use — this is normal
 - Progress is shown in the Zed status bar
 - Subsequent opens use the cached index and are fast
 
-#### Features stopped working after a Zed update
+### Jupyter kernel not appearing in Zed
+
+- Run `jupyter kernelspec list` to confirm the kernel is installed
+- If missing, re-run `install.bat` / `install.sh` from the `kernel/` directory
+- Run **"REPL: Refresh Kernelspecs"** from the Zed command palette (`Ctrl+Shift+P`)
+- Make sure `jupyter` is installed and on your PATH
+
+### Features stopped working after a Zed update
 
 - Rebuild the extension with `build.bat` / `build.sh` and reinstall
 
-#### Settings don't seem to apply
+### Settings don't seem to apply
 
 - Settings changes require a **full Zed restart** — not just closing and reopening a file
 
-#### Checking logs
+### Checking logs
 
 - Zed menu → View → Zed Log
 - Look for `v-analyzer` entries to see initialization and request details
@@ -548,8 +711,11 @@ zed-v-enhanced/
 ## Links
 
 - [V Language](https://vlang.io/)
-- [v-analyzer](https://github.com/vlang/v-analyzer)
+- [Forked v-analyzer (required)](https://github.com/DaZhi-the-Revelator/v-analyzer)
+- [Upstream v-analyzer](https://github.com/vlang/v-analyzer)
 - [Zed Editor](https://zed.dev/)
+- [Zed REPL Docs](https://zed.dev/docs/repl)
+- [Jupyter Kernel Protocol](https://jupyter-client.readthedocs.io/en/stable/messaging.html)
 - [LSP Specification](https://microsoft.github.io/language-server-protocol/)
 
 ---
