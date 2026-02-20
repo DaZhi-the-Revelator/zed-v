@@ -40,14 +40,7 @@ impl zed::Extension for VEnhancedExtension {
                 "enable_constant_type_hints": true,
                 "enable_enum_field_value_hints": true
             },
-            "enable_semantic_tokens": "full",
-            "code_lens": {
-                "enable": true,
-                "enable_run_lens": true,
-                "enable_run_tests_lens": true,
-                "enable_inheritors_lens": true,
-                "enable_super_interfaces_lens": true
-            }
+            "enable_semantic_tokens": "full"
         })))
     }
 }
@@ -80,10 +73,10 @@ impl VEnhancedExtension {
 
         let path = worktree.which(binary_name).ok_or_else(|| {
             format!(
-                "v-analyzer not found in PATH.\n\n\
-                Please install it by running:\n\
-                v download -RD https://raw.githubusercontent.com/vlang/v-analyzer/main/install.vsh\n\n\
-                Then restart Zed."
+            "v-analyzer not found in PATH.\n\n\
+            Please install it by running:\n\
+            v download -RD https://raw.githubusercontent.com/DaZhi-the-Revelator/v-analyzer/main/install.vsh\n\n\
+            Then restart Zed."
             )
         })?;
 
