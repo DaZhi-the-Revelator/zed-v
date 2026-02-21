@@ -1,0 +1,9 @@
+{
+  "argv": ["v-kernel", "{connection_file}"],
+  "display_name": "V",
+  "language": "v",
+  "interrupt_mode": "signal",
+  "metadata": {
+    "debugger": false
+  }
+}

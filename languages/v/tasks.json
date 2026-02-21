@@ -1,0 +1,37 @@
+[
+  {
+    "label": "v run $ZED_FILE",
+    "command": "v",
+    "args": ["run", "$ZED_FILE"],
+    "cwd": "$ZED_DIRNAME",
+    "tags": ["v-main", "v-run"]
+  },
+  {
+    "label": "v run $ZED_WORKTREE_ROOT",
+    "command": "v",
+    "args": ["run", "$ZED_WORKTREE_ROOT"],
+    "cwd": "$ZED_WORKTREE_ROOT",
+    "tags": ["v-run"]
+  },
+  {
+    "label": "v build $ZED_FILE",
+    "command": "v",
+    "args": ["build", "$ZED_FILE"],
+    "cwd": "$ZED_DIRNAME",
+    "tags": ["v-build"]
+  },
+  {
+    "label": "v build $ZED_WORKTREE_ROOT",
+    "command": "v",
+    "args": ["build", "$ZED_WORKTREE_ROOT"],
+    "cwd": "$ZED_WORKTREE_ROOT",
+    "tags": ["v-build"]
+  },
+  {
+    "label": "v test $ZED_FILE",
+    "command": "v",
+    "args": ["test", "$ZED_FILE"],
+    "cwd": "$ZED_DIRNAME",
+    "tags": ["v-test"]
+  }
+]
