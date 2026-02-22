@@ -26,6 +26,11 @@ A comprehensive V language extension for [Zed](https://zed.dev/), powered by a c
   - [Forked v-analyzer (Required)](#forked-v-analyzer-required)
   - [V Compiler](#v-compiler)
   - [Jupyter Kernel (Optional)](#jupyter-kernel-optional)
+- [Migrating from the Standard V Extension](#migrating-from-the-standard-v-extension)
+  - [Step 1 — Stop and Remove VLS](#step-1--stop-and-remove-vls)
+  - [Step 2 — Uninstall the V Extension](#step-2--uninstall-the-v-extension)
+  - [Step 3 — Clean Up Residual Settings](#step-3--clean-up-residual-settings)
+  - [Step 4 — Install V Enhanced](#step-4--install-v-enhanced)
 - [Installation](#installation)
   - [Development Installation](#development-installation)
 - [Configuration](#configuration)
@@ -600,6 +605,84 @@ Then set `custom_vroot` in the generated `.v-analyzer/config.toml`.
 ### Jupyter Kernel (Optional)
 
 Required only if you want REPL/notebook support. See [Jupyter Kernel & REPL Integration](#-jupyter-kernel--repl-integration) above.
+
+---
+
+## Migrating from the Standard V Extension
+
+If you previously used the **V** extension (the one backed by [VLS — the official V Language Server](https://github.com/vlang/vls)), follow these steps to switch cleanly to V Enhanced. Running both extensions or both language servers at the same time will cause conflicts.
+
+### Step 1 — Stop and Remove VLS
+
+VLS is a separate binary that the standard V extension downloads and manages. Remove it before installing V Enhanced so it cannot start and interfere with v-analyzer.
+
+**Locate the VLS binary:**
+
+| Platform | Default VLS location |
+|----------|----------------------|
+| Windows | `%USERPROFILE%\.vls\bin\vls.exe` |
+| Linux / macOS | `~/.vls/bin/vls` |
+
+Delete the binary (and the entire `~/.vls` directory if you no longer need it):
+
+```powershell
+# Windows (PowerShell)
+Remove-Item -Recurse -Force "$env:USERPROFILE\.vls"
+```
+
+```sh
+# Linux / macOS
+rm -rf ~/.vls
+```
+
+If you installed VLS manually to a custom location or via `v install vls`, also remove that copy:
+
+```sh
+# Installed via `v install vls`
+rm -rf "$(v doctor 2>/dev/null | grep 'vmodules' | awk '{print $2}')/vls"
+# Or simply locate and delete the `vls` binary from your PATH
+```
+
+### Step 2 — Uninstall the V Extension
+
+1. Open Zed
+2. Open Extensions (`Ctrl+Shift+X` on Windows/Linux, `Cmd+Shift+X` on macOS)
+3. Find **V** in the Installed extensions list
+4. Click **Uninstall**
+5. Restart Zed fully (quit and reopen — not just a window reload)
+
+### Step 3 — Clean Up Residual Settings
+
+The standard V extension may have left `lsp` configuration blocks in your Zed `settings.json` that reference `vls`. These will cause Zed to attempt to launch VLS even after the extension is removed.
+
+Open your Zed `settings.json` (`Ctrl+,` / `Cmd+,`, then click **Open Settings JSON**) and remove any block that looks like:
+
+```json
+"lsp": {
+  "vls": {
+    ...
+  }
+}
+```
+
+Also remove any `"V"` language overrides that point to VLS, for example:
+
+```json
+"languages": {
+  "V": {
+    "language_servers": ["vls"],
+    ...
+  }
+}
+```
+
+Leave any other unrelated settings intact.
+
+### Step 4 — Install V Enhanced
+
+With the old extension and server fully removed, follow the [Installation](#installation) instructions below. Install the forked v-analyzer as described in [Installing the Forked v-analyzer](#installing-the-forked-v-analyzer) — **do not reuse any VLS binary or configuration**.
+
+After restarting Zed with V Enhanced active, open a `.v` file and confirm in **View → Zed Log** that `v-analyzer` (not `vls`) is the language server that started.
 
 ---
 
