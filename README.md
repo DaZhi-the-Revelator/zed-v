@@ -369,7 +369,7 @@ println(distance(p1, p3))  // → 10.0
 
 - **No autocomplete in notebooks** — completion comes from v-analyzer via LSP, not the kernel; works in `.v` files, not in `.ipynb` notebooks
 - **Recompilation on every cell** — the full accumulated program is recompiled each time; V is fast, but long sessions accumulate more code to compile
-- **No interrupt** — `Ctrl+C` sends `interrupt_request` but the kernel does not yet forward SIGINT to the running `v` process
+- **Interrupt support** — `Ctrl+C` sends `interrupt_request`; the kernel forwards SIGINT (Unix) or `TerminateProcess` (Windows) to the running `v run` child process and returns the kernel to idle
 - **Plain text output only** — no rich display (images, HTML, etc.); V has no equivalent of IPython's `display()` machinery
 
 ---

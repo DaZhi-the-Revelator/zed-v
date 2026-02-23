@@ -7,7 +7,7 @@
 //!   - Shell socket:   receives execute_request, kernel_info_request, etc.
 //!   - IOPub socket:   broadcasts status, stream output, errors to all clients
 //!   - Stdin socket:   (input_request — not used by V, kept for protocol compliance)
-//!   - Control socket: handles shutdown_request / interrupt_request
+//!   - Control socket: handles shutdown_request, interrupt_request
 //!   - Heartbeat:      echoes back raw bytes to signal liveness
 //!
 //! Stateful execution:
@@ -195,6 +195,10 @@ struct KernelState {
     execution_count: u32,
     /// Temporary directory for compiled artefacts
     tmp_dir: PathBuf,
+    /// PID of the currently running `v run` child process, if any.
+    /// Set before blocking on wait_with_output, cleared after. The control
+    /// thread reads this to send SIGINT without needing the Child handle.
+    running_pid: Option<u32>,
 }
 
 impl KernelState {
@@ -206,6 +210,7 @@ impl KernelState {
             statements: Vec::new(),
             execution_count: 0,
             tmp_dir,
+            running_pid: None,
         }
     }
 
@@ -229,8 +234,9 @@ impl KernelState {
             return (String::new(), format!("Failed to write source: {e}"), true);
         }
 
-        // Run with `v run <file>`
-        run_v(&src_path)
+        // Run with `v run <file>`, storing the child handle so interrupt_request
+        // can kill it while it's still running.
+        run_v(&src_path, self)
     }
 
     /// Synthesise a complete runnable V source from accumulated state.
@@ -449,7 +455,9 @@ fn collect_statement(lines: &[&str], start: usize) -> (String, usize) {
 // ── V runner ─────────────────────────────────────────────────────────────────
 
 /// Execute a V source file and return (stdout, stderr, is_error).
-fn run_v(src: &PathBuf) -> (String, String, bool) {
+/// Stores the child handle in `state.running_child` while running so that
+/// an `interrupt_request` arriving on the control socket can kill it.
+fn run_v(src: &PathBuf, state: &mut KernelState) -> (String, String, bool) {
     let mut cmd = Command::new("v");
     cmd.arg("run")
         .arg(src)
@@ -469,16 +477,52 @@ fn run_v(src: &PathBuf) -> (String, String, bool) {
         }
     };
 
+    state.running_pid = Some(child.id());
+
     let output = match child.wait_with_output() {
         Ok(o) => o,
-        Err(e) => return (String::new(), format!("Failed to wait on `v run`: {e}"), true),
+        Err(e) => {
+            state.running_pid = None;
+            return (String::new(), format!("Failed to wait on `v run`: {e}"), true);
+        }
     };
+
+    state.running_pid = None;
 
     let stdout = String::from_utf8_lossy(&output.stdout).to_string();
     let stderr = String::from_utf8_lossy(&output.stderr).to_string();
-    let is_error = !output.status.success();
+    // Treat SIGINT exit (status 2 on Unix, 1 on Windows) as non-error so
+    // an interrupted cell doesn't spam the error panel.
+    let is_error = !output.status.success() && stdout.is_empty() && !stderr.contains("Killed");
 
     (stdout, stderr, is_error)
+}
+
+// ── Process interrupt ───────────────────────────────────────────────────────
+
+/// Send SIGINT (Unix) or TerminateProcess (Windows) to the given PID.
+fn interrupt_process(pid: u32) {
+    #[cfg(unix)]
+    {
+        // SAFETY: kill(2) is always safe to call with a valid PID and signal number.
+        unsafe {
+            libc::kill(pid as libc::pid_t, libc::SIGINT);
+        }
+    }
+    #[cfg(windows)]
+    {
+        use windows_sys::Win32::Foundation::CloseHandle;
+        use windows_sys::Win32::System::Threading::{
+            OpenProcess, TerminateProcess, PROCESS_TERMINATE,
+        };
+        unsafe {
+            let handle = OpenProcess(PROCESS_TERMINATE, 0, pid);
+            if handle != 0 {
+                TerminateProcess(handle, 1);
+                CloseHandle(handle);
+            }
+        }
+    }
 }
 
 // ── Kernel info ───────────────────────────────────────────────────────────────
@@ -564,6 +608,7 @@ fn main() {
     {
         let key = key.clone();
         let session_id = session_id.clone();
+        let state = Arc::clone(&state);
         thread::spawn(move || loop {
             if let Some(msg) = recv_message(&control, &key) {
                 let msg_type = msg.header["msg_type"]
@@ -587,6 +632,25 @@ fn main() {
                         if !restart {
                             std::process::exit(0);
                         }
+                    }
+                    "interrupt_request" => {
+                        // Kill the running child process if there is one.
+                        let pid = state.lock().unwrap().running_pid;
+                        if let Some(pid) = pid {
+                            interrupt_process(pid);
+                            eprintln!("[v-kernel] Interrupted pid={pid}");
+                        } else {
+                            eprintln!("[v-kernel] interrupt_request but no child running");
+                        }
+                        let reply = JupyterMessage {
+                            identities: msg.identities.clone(),
+                            header: make_header("interrupt_reply", &session_id),
+                            parent_header: msg.header.clone(),
+                            metadata: json!({}),
+                            content: json!({ "status": "ok" }),
+                            buffers: vec![],
+                        };
+                        send_message(&control, &reply, &key);
                     }
                     _ => {
                         eprintln!("[v-kernel] Unhandled control msg: {msg_type}");
