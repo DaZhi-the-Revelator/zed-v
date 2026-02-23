@@ -190,6 +190,10 @@ All LSP intelligence is provided by the forked v-analyzer. This extension wires 
   - `for` loops
   - `match` expressions
   - All `{ }` block constructs
+- **Selection Range** — Structural selection expansion via **Alt+Shift+→** (Expand Selection):
+  - Each press grows the selection one syntactic level outward
+  - Follows the actual V parse tree: identifier → expression → argument list → call → statement → block → function body → file
+  - Implemented in the forked v-analyzer via `textDocument/selectionRange`
 - **Document Symbols** — Full nested symbol tree in the outline panel:
   - Functions and methods (with signature as detail)
   - Structs (with their fields nested inside)
@@ -393,6 +397,14 @@ Powered by `tree_sitter_v` — v-analyzer's own battle-tested grammar — with c
 - Comments: line (`//`) and block (`/* */`)
 - Shebang (`#!/usr/bin/env v`)
 
+**Embedded language injection** via `injections.scm` gives sub-languages their own highlighting inside V source:
+
+| Context | Injected language |
+|---------|------------------|
+| `${ ... }` inside string interpolation | V |
+| `sql db { ... }` ORM blocks | SQL |
+| `asm x64 { ... }` inline assembly | ASM |
+
 ---
 
 ### ✅ Rainbow Brackets (Optional)
@@ -423,7 +435,7 @@ Or enable globally:
 
 ### ✅ Code Snippets
 
-44 built-in snippets for common V patterns. Type the prefix and press Tab.
+48 built-in snippets for common V patterns. Type the prefix and press Tab.
 
 #### Functions
 
@@ -482,6 +494,10 @@ Or enable globally:
 | `spawn` | Spawn a goroutine |
 | `chan` | Channel declaration |
 | `lock` | Lock block for shared variable |
+| `select` | Select with send arm |
+| `selectrecv` | Select with receive arm |
+| `selectelse` | Select with non-blocking `else` branch |
+| `selecttimeout` | Select with timeout branch |
 
 #### Declarations
 
@@ -770,9 +786,10 @@ v-enhanced/
 │       ├── highlights.scm      # Comprehensive syntax highlighting queries
 │       ├── brackets.scm        # Rainbow bracket pairs ({ } [ ] ( ))
 │       ├── folds.scm           # Code folding queries
+│       ├── injections.scm      # Embedded language injections (V interp, SQL, ASM)
 │       ├── outline.scm         # Breadcrumb / outline panel queries
 │       ├── tags.scm            # Symbol search queries (Ctrl+T)
-│       └── snippets.json       # 44 code snippets
+│       └── snippets.json       # 48 code snippets
 └── kernel/                     # Jupyter kernel (separate Rust project)
     ├── src/
     │   └── main.rs             # Full kernel implementation

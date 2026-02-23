@@ -238,5 +238,47 @@
     "prefix": "header",
     "body": ["// ============================================================", "// ${1:Section Name}", "// ============================================================"],
     "description": "Section comment header"
+  },
+  "Select (send/receive)": {
+    "prefix": "select",
+    "body": ["select {
+	${1:ch} <- ${2:value} {
+		${0}
+	}
+}"],
+    "description": "Select statement for channel send/receive"
+  },
+  "Select with receive": {
+    "prefix": "selectrecv",
+    "body": ["select {
+	${1:val} := <-${2:ch} {
+		${0}
+	}
+}"],
+    "description": "Select statement receiving from a channel"
+  },
+  "Select with else": {
+    "prefix": "selectelse",
+    "body": ["select {
+	${1:ch} <- ${2:value} {
+		${3}
+	}
+	else {
+		${0}
+	}
+}"],
+    "description": "Select statement with else (non-blocking) branch"
+  },
+  "Select with timeout": {
+    "prefix": "selecttimeout",
+    "body": ["select {
+	${1:ch} <- ${2:value} {
+		${3}
+	}
+	${4:1} * time.second {
+		${0}
+	}
+}"],
+    "description": "Select statement with timeout branch"
   }
 }
