@@ -13,6 +13,7 @@ A comprehensive V language extension for [Zed](https://zed.dev/), powered by a c
 - [Features](#features)
   - [✅ Core Language Intelligence](#-core-language-intelligence)
   - [✅ Advanced Code Editing](#-advanced-code-editing)
+  - [✅ v.mod Manifest Support](#-vmod-manifest-support)
   - [✅ Running Programs (Runnables)](#-running-programs-runnables)
   - [✅ Jupyter Kernel & REPL Integration](#-jupyter-kernel--repl-integration)
   - [✅ Syntax Highlighting](#-syntax-highlighting)
@@ -397,6 +398,8 @@ Powered by `tree_sitter_v` — v-analyzer's own battle-tested grammar — with c
 - Comments: line (`//`) and block (`/* */`)
 - Shebang (`#!/usr/bin/env v`)
 
+**Variable scoping** via `locals.scm` prevents local variable names from bleeding across function boundaries in syntax-only highlighting mode (files over 1000 lines). Scopes are defined for function bodies, blocks, `if`/`else`, `for`, `match`, `lock`, `unsafe`, and `defer`. Parameter declarations, receiver names, loop variables, and short variable declarations are all tracked as definitions.
+
 **Embedded language injection** via `injections.scm` gives sub-languages their own highlighting inside V source:
 
 | Context | Injected language |
@@ -430,6 +433,19 @@ Or enable globally:
   "colorize_brackets": true
 }
 ```
+
+---
+
+### ✅ v.mod Manifest Support
+
+Files named `v.mod` are recognised as a distinct language (**VModManifest**) and get:
+
+- Syntax highlighting: manifest type name, field keys, string values, brackets, and comments
+- Correct bracket auto-closing (`{`, `[`, `'`)
+- Comment toggling (`//` and `/* */`)
+- Proper indentation (4-space tabs, matching V style)
+
+No language server is attached — v.mod files are static manifests and do not need LSP features.
 
 ---
 
@@ -787,9 +803,14 @@ v-enhanced/
 │       ├── brackets.scm        # Rainbow bracket pairs ({ } [ ] ( ))
 │       ├── folds.scm           # Code folding queries
 │       ├── injections.scm      # Embedded language injections (V interp, SQL, ASM)
+│       ├── locals.scm          # Variable scope definitions for syntax-only highlighting
 │       ├── outline.scm         # Breadcrumb / outline panel queries
 │       ├── tags.scm            # Symbol search queries (Ctrl+T)
 │       └── snippets.json       # 48 code snippets
+├── languages/
+│   └── vmod/
+│       ├── config.toml         # VModManifest language settings
+│       └── highlights.scm      # v.mod syntax highlighting (reuses V grammar)
 └── kernel/                     # Jupyter kernel (separate Rust project)
     ├── src/
     │   └── main.rs             # Full kernel implementation

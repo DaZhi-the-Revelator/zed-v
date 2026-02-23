@@ -1,0 +1,14 @@
+name = "VModManifest"
+grammar = "v"
+path_suffixes = ["v.mod"]
+line_comments = ["//"]
+block_comment = ["/*", "*/"]
+
+indent = { tab_size = 4, unit = "\t" }
+
+brackets = [
+  { start = "{", end = "}", close = true, newline = true },
+  { start = "[", end = "]", close = true, newline = true },
+  { start = "(", end = ")", close = false, newline = false },
+  { start = "'", end = "'", close = true, newline = false },
+]
