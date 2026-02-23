@@ -6,6 +6,8 @@ schema_version = 1
 authors = ["Ouyang Dazhi <204389009+DaZhi-the-Revelator@users.noreply.github.com>"]
 repository = "https://github.com/DaZhi-the-Revelator/zed-v-enhanced"
 
+snippets = "snippets.json"
+
 [grammars.v]
 repository = "https://github.com/DaZhi-the-Revelator/tree-sitter-zed"
 commit = "083d71653f19bca59022cf0208428bac69bcdf7f"
