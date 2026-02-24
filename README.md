@@ -258,7 +258,7 @@ All tasks run from the directory containing the source file (`$ZED_DIRNAME`) or 
 
 #### Test functions
 
-Functions named `test_*` get their own gutter arrow and appear individually in the Runnables panel, each mapped to `v test $ZED_FILE`.
+Functions named `test_*` get their own gutter arrow and appear individually in the Runnables panel. When you click the gutter arrow next to a specific test function, V Enhanced runs only that test using `v test -run test_name $ZED_FILE`. This enables true TDD workflows where you can iterate on a single test without running the entire file's test suite.
 
 ### ✅ Jupyter Kernel & REPL Integration
 
