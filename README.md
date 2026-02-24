@@ -230,6 +230,7 @@ All LSP intelligence is provided by the forked v-analyzer. This extension wires 
   - **Add `[heap]` Attribute** — adds `[heap]` to a struct definition
   - **Add `[flag]` Attribute** — adds `[flag]` to an enum definition
   - **Import Module** — detects an `undefined ident` compiler error and automatically inserts the correct `import` statement
+  - **Remove Unused Import** — automatically removes import statements that the V compiler reports as unused
 
 ---
 

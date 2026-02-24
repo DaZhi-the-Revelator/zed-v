@@ -32,6 +32,13 @@
     "command": "v",
     "args": ["test", "$ZED_FILE"],
     "cwd": "$ZED_DIRNAME",
+    "tags": ["v-test-file"]
+  },
+  {
+    "label": "v test -run $ZED_SYMBOL",
+    "command": "v",
+    "args": ["test", "-run", "$ZED_SYMBOL", "$ZED_FILE"],
+    "cwd": "$ZED_DIRNAME",
     "tags": ["v-test"]
   }
 ]
