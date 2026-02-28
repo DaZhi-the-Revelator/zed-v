@@ -288,6 +288,46 @@ sudo dnf install zeromq-devel
 
 On Windows, ZeroMQ is bundled — no extra steps needed.
 
+#### Windows — Additional Requirements
+
+On Windows, the kernel build requires both **Microsoft Visual Studio Build Tools** and **Rust** before running `install.bat`.
+
+**Step 1 — Install Visual Studio Build Tools**
+
+Download the installer from the [Visual Studio downloads page](https://visualstudio.microsoft.com/downloads/) (scroll to *Tools for Visual Studio* → **Build Tools for Visual Studio**). Run the installer and, on the *Workloads* tab, select:
+
+- ✅ **Desktop development with C++**
+
+This installs the MSVC compiler, Windows SDK, and the C/C++ linker that Rust uses on Windows. The full download is roughly 4–6 GB.
+
+> **Alternative — winget:**
+>
+> ```bat
+> winget install Microsoft.VisualStudio.2022.BuildTools --override "--quiet --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended"
+> ```
+
+**Step 2 — Install Rust**
+
+Download and run `rustup-init.exe` from [rustup.rs](https://rustup.rs/). Accept the defaults. When prompted to select an installation type, choose **1) Proceed with standard installation**.
+
+After the installer finishes, open a **new** Command Prompt or PowerShell window so that `cargo` and `rustc` are on your `PATH`.
+
+Verify:
+
+```bat
+rustc --version
+cargo --version
+```
+
+> **If you installed Build Tools *after* Rust:** rustup links the MSVC toolchain automatically, but only if Build Tools were present at install time. If you see a linker error like `link.exe not found`, run:
+>
+> ```bat
+> rustup toolchain install stable-x86_64-pc-windows-msvc
+> rustup default stable-x86_64-pc-windows-msvc
+> ```
+
+Once both prerequisites are in place, proceed with the **Build and install** steps below.
+
 **Build and install:**
 
 ```bat
