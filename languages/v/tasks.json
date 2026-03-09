@@ -40,5 +40,12 @@
     "args": ["test", "-run", "$ZED_SYMBOL", "$ZED_FILE"],
     "cwd": "$ZED_DIRNAME",
     "tags": ["v-test"]
+  },
+  {
+    "label": "v missdoc $ZED_WORKTREE_ROOT",
+    "command": "v",
+    "args": ["missdoc", "$ZED_WORKTREE_ROOT"],
+    "cwd": "$ZED_WORKTREE_ROOT",
+    "tags": ["v-missdoc"]
   }
 ]

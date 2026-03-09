@@ -9,10 +9,12 @@
 
 ; ── SQL (ORM) ─────────────────────────────────────────────────────────────────
 ; sql db { select from Table where ... }
-(sql_expression) @injection.content
-(#set! injection.language "sql")
+(sql_expression
+  (_) @injection.content
+  (#set! injection.language "sql"))
 
 ; ── Inline assembly ──────────────────────────────────────────────────────────
 ; asm x64 { ... }  — highlight body as asm if the language is available
-(asm_statement) @injection.content
-(#set! injection.language "asm")
+(asm_statement
+  (_) @injection.content
+  (#set! injection.language "asm"))

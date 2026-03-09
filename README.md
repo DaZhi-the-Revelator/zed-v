@@ -2,6 +2,8 @@
 
 A comprehensive V language extension for [Zed](https://zed.dev/), powered by a custom fork of [v-analyzer](https://github.com/DaZhi-the-Revelator/v-analyzer/tree/added-features) with bug fixes, enhanced hover documentation, and correct symbol renaming.
 
+**Supports V 0.5.1.**
+
 ---
 
 ## Table of Contents
@@ -99,6 +101,27 @@ git pull
 v run build.vsh
 # then copy the binary to PATH as above
 ```
+
+---
+
+## V 0.5.1 — Breaking Change Notice
+
+> **`x.ttf` rendering module has moved.**
+>
+> In V 0.5.1, `vlib/x/ttf/render_sokol_cpu.v` was extracted into a separate module. If your
+> project imports `x.ttf` for rendering functions, update your import:
+>
+> ```v
+> // Before (V < 0.5.1)
+> import x.ttf
+>
+> // After (V 0.5.1+)
+> import x.ttf.render_sokol
+> ```
+>
+> The base `x.ttf` module remains available for non-rendering TTF utilities. Only the sokol
+> CPU-rendering surface has moved to `x.ttf.render_sokol`. After updating V to 0.5.1, re-run
+> `v-analyzer` against your project to refresh the stub index.
 
 ---
 
@@ -253,6 +276,7 @@ Press `F4` to open the full task list for the current file. Available tasks:
 | `v test <file>` | `v test $ZED_FILE` | Any `.v` file |
 | `v run <project>` | `v run $ZED_WORKTREE_ROOT` | When a worktree is open |
 | `v build <project>` | `v build $ZED_WORKTREE_ROOT` | When a worktree is open |
+| `v missdoc <project>` | `v missdoc $ZED_WORKTREE_ROOT` | When a worktree is open |
 
 All tasks run from the directory containing the source file (`$ZED_DIRNAME`) or the project root, as appropriate.
 
@@ -292,7 +316,7 @@ On Windows, ZeroMQ is bundled — no extra steps needed.
 
 On Windows, the kernel build requires both **Microsoft Visual Studio Build Tools** and **Rust** before running `install.bat`.
 
-**Step 1 — Install Visual Studio Build Tools**
+##### Step 1 — Install Visual Studio Build Tools
 
 Download the installer from the [Visual Studio downloads page](https://visualstudio.microsoft.com/downloads/) (scroll to *Tools for Visual Studio* → **Build Tools for Visual Studio**). Run the installer and, on the *Workloads* tab, select:
 
@@ -306,7 +330,7 @@ This installs the MSVC compiler, Windows SDK, and the C/C++ linker that Rust use
 > winget install Microsoft.VisualStudio.2022.BuildTools --override "--quiet --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended"
 > ```
 
-**Step 2 — Install Rust**
+##### Step 2 — Install Rust
 
 Download and run `rustup-init.exe` from [rustup.rs](https://rustup.rs/). Accept the defaults. When prompted to select an installation type, choose **1) Proceed with standard installation**.
 
@@ -492,7 +516,7 @@ No language server is attached — v.mod files are static manifests and do not n
 
 ### ✅ Code Snippets
 
-48 built-in snippets for common V patterns. Type the prefix and press Tab.
+50 built-in snippets for common V patterns. Type the prefix and press Tab.
 
 #### Functions
 
@@ -593,6 +617,8 @@ No language server is attached — v.mod files are static manifests and do not n
 | `interp` | String interpolation |
 | `unsafe` | Unsafe block |
 | `sql` | SQL ORM query |
+| `sqljoin` | SQL ORM query with explicit JOIN (V 0.5.1+) |
+| `sqltx` | SQL ORM transaction block (V 0.5.1+) |
 | `route` | Vweb route handler |
 | `header` | Section comment header |
 
@@ -665,7 +691,7 @@ See the [Installing the Forked v-analyzer](#installing-the-forked-v-analyzer) se
 
 ### V Compiler
 
-v-analyzer uses the V compiler for diagnostics and formatting. Install V from [vlang.io](https://vlang.io/).
+v-analyzer uses the V compiler for diagnostics and formatting. This extension targets **V 0.5.1**. Install V from [vlang.io](https://vlang.io/).
 
 If v-analyzer cannot find your V installation automatically, create a project-local config:
 
@@ -847,7 +873,7 @@ v-enhanced/
 │       ├── locals.scm          # Variable scope definitions for syntax-only highlighting
 │       ├── outline.scm         # Breadcrumb / outline panel queries
 │       ├── tags.scm            # Symbol search queries (Ctrl+T)
-│       └── snippets.json       # 48 code snippets
+│       └── snippets.json       # 50 code snippets
 ├── languages/
 │   └── vmod/
 │       ├── config.toml         # VModManifest language settings

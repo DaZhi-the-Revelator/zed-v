@@ -229,6 +229,30 @@
     "body": ["sql ${1:db} {", "\tselect from ${2:Table} where ${3:condition}", "}"],
     "description": "SQL ORM query"
   },
+  "SQL JOIN query": {
+    "prefix": "sqljoin",
+    "body": [
+      "sql ${1:db} {",
+      "\tselect from ${2:Table}",
+      "\tjoin ${3:OtherTable} on ${2:Table}.${4:id} == ${3:OtherTable}.${5:foreign_id}",
+      "\twhere ${2:Table}.${6:field} == ${7:value}",
+      "}"
+    ],
+    "description": "SQL ORM query with explicit JOIN (V 0.5.1+)"
+  },
+  "SQL transaction": {
+    "prefix": "sqltx",
+    "body": [
+      "sql ${1:db} {",
+      "\tbegin",
+      "}",
+      "${0}",
+      "sql ${1:db} {",
+      "\tcommit",
+      "}"
+    ],
+    "description": "SQL ORM transaction block (V 0.5.1+)"
+  },
   "Vweb route": {
     "prefix": "route",
     "body": ["['/\\${1:path}']", "pub fn (mut ${2:app} ${3:App}) ${4:handler}() vweb.Result {", "\t${0}", "\treturn app.text('${5:response}')", "}"],

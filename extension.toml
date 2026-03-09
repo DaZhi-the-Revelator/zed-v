@@ -1,7 +1,7 @@
 id = "v-enhanced"
 name = "V Enhanced"
 description = "V language support for Zed — powered by v-analyzer with comprehensive syntax highlighting, intelligent completions, inlay hints, and more"
-version = "0.5.0"
+version = "0.5.1"
 schema_version = 1
 authors = ["Ouyang Dazhi <204389009+DaZhi-the-Revelator@users.noreply.github.com>"]
 repository = "https://github.com/DaZhi-the-Revelator/zed-v-enhanced"
@@ -10,7 +10,7 @@ snippets = "snippets.json"
 
 [grammars.v]
 repository = "https://github.com/DaZhi-the-Revelator/tree-sitter-zed"
-commit = "61989a8ffbf08a9c6d7b7488f843b8e0d4035703"
+commit = "083d71653f19bca59022cf0208428bac69bcdf7f"
 
 [language_servers.v-analyzer]
 name = "v-analyzer"
