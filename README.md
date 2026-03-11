@@ -383,9 +383,11 @@ jupyter kernelspec list
 #### Using the REPL in Zed
 
 1. Open any `.v` file
-2. Divide it into cells using `// %%` comment separators
-3. Place your cursor in a cell
+2. Optionally divide it into cells using `// %%` comment separators
+3. Place your cursor anywhere in the cell you want to run
 4. Press `Ctrl+Shift+Enter` (Windows/Linux) or `Cmd+Shift+Enter` (macOS) to execute the cell
+
+With no `// %%` separators the entire file is treated as a single cell. With separators, only the cell containing your cursor is sent to the kernel.
 
 If the V kernel doesn't appear in Zed's kernel picker, run **"REPL: Refresh Kernelspecs"** from the command palette (`Ctrl+Shift+P`).
 
@@ -393,7 +395,7 @@ If the V kernel doesn't appear in Zed's kernel picker, run **"REPL: Refresh Kern
 
 `v-kernel` implements the [Jupyter messaging protocol v5.3](https://jupyter-client.readthedocs.io/en/stable/messaging.html) over ZeroMQ.
 
-**Stateful execution across cells:** top-level declarations (`fn`, `struct`, `enum`, `const`, `import`, `type`, `interface`) accumulate across cells for the duration of the session. Bare statements and expressions are automatically wrapped in `fn main()` and re-executed together with all accumulated declarations on each cell run. This mirrors how REPL kernels for other compiled languages (e.g. `evcxr` for Rust) work.
+**Stateful execution across cells:** top-level declarations (`fn`, `struct`, `enum`, `const`, `import`, `type`, `interface`) accumulate across cells for the duration of the session — later cells can reference structs and functions defined in earlier cells. Bare statements and expressions are wrapped in `fn main()` for the **current cell only** and are not accumulated, so re-running or editing a cell never causes "already defined" / redeclaration errors from stale earlier runs.
 
 ```v
 import math
@@ -439,6 +441,7 @@ println(distance(p1, p3))  // → 10.0
 - **Recompilation on every cell** — the full accumulated program is recompiled each time; V is fast, but long sessions accumulate more code to compile
 - **Interrupt support** — `Ctrl+C` sends `interrupt_request`; the kernel forwards SIGINT (Unix) or `TerminateProcess` (Windows) to the running `v run` child process and returns the kernel to idle
 - **No arbitrary rich display** — only `dump()` output is rendered as HTML; for general rich output, V has no equivalent of IPython's `display()` machinery
+- **dump() table is render-only** — Zed's "copy output" and "open in buffer" actions work on plain stream output only; `display_data` messages (which is what the HTML table uses) are not supported by those actions in Zed's REPL frontend. This is a Zed limitation, not a kernel limitation. A `text/plain` fallback is included in the message for non-HTML frontends.
 
 ---
 
@@ -448,7 +451,7 @@ println(distance(p1, p3))  // → 10.0
 
 V's `dump()` already returns structured information on each call:
 
-```
+```log
 [main.v:8] x = int(42)
 ```
 

@@ -8,9 +8,6 @@ description = "Jupyter kernel for the V programming language"
 name = "v-kernel"
 path = "src/main.rs"
 
-[target.x86_64-pc-windows-msvc]
-rustflags = ["-l", "advapi32"]
-
 [build-dependencies]
 
 [dependencies]

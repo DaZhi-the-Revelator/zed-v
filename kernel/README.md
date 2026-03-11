@@ -10,7 +10,7 @@ Integrates with [Zed's REPL](https://zed.dev/docs/repl) — press `Ctrl+Shift+En
 `v-kernel` implements the [Jupyter messaging protocol v5.3](https://jupyter-client.readthedocs.io/en/stable/messaging.html) over ZeroMQ.  
 Zed detects it automatically once the kernelspec is installed — no configuration needed.
 
-**Stateful execution across cells:** top-level declarations (`fn`, `struct`, `enum`, `const`, `import`, `type`, `interface`) accumulate across cells in a session. Bare statements and expressions are wrapped in `fn main()` and re-executed together with all prior statements each time.
+**Stateful execution across cells:** top-level declarations (`fn`, `struct`, `enum`, `const`, `import`, `type`, `interface`) accumulate across cells in a session — later cells can reference structs and functions defined earlier. Bare statements and expressions are wrapped in `fn main()` for the **current cell only** and are not accumulated, so re-running or editing a cell never causes redeclaration errors.
 
 ```v
 // Cell 1 — declares a struct (accumulated)
@@ -180,3 +180,5 @@ v-kernel/
 - **No autocomplete / introspection** — the kernel runs code but does not expose completion or inspection endpoints (those come from v-analyzer via the LSP, which works independently)
 - **Re-execution overhead** — the full accumulated program is recompiled on every cell execution; V is fast, but deep sessions will accumulate latency
 - **Interrupt support** — `Ctrl+C` sends `interrupt_request`; the kernel forwards SIGINT (Unix) or `TerminateProcess` (Windows) to the running `v run` child process and returns the kernel to idle
+- **dump() table is render-only** — Zed's "copy output" and "open in buffer" actions apply to plain stream messages only; the HTML table uses `display_data` which Zed does not currently expose those actions for. A `text/plain` fallback is included for non-HTML frontends. This is a Zed frontend limitation.
+- **No arbitrary rich display** — only `dump()` is rendered as HTML; V has no equivalent of IPython's `display()` machinery

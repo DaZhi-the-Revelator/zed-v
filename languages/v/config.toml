@@ -3,6 +3,7 @@ grammar = "v"
 path_suffixes = ["v", "vv", "vsh"]
 line_comments = ["//"]
 block_comment = ["/*", "*/"]
+cell_pattern = "// %%"
 autoclose_before = "=}]):\",\n\t "
 
 language_servers = ["v-analyzer"]

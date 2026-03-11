@@ -11,10 +11,15 @@
 //!   - Heartbeat:      echoes back raw bytes to signal liveness
 //!
 //! Stateful execution:
-//!   Each session accumulates top-level declarations (fn, struct, enum, const,
-//!   import, type, interface) across cells. Bare statements and expressions are
-//!   wrapped in fn main(). On each execute_request the kernel synthesises a
-//!   complete .v source file and runs it via `v run <tmpfile>`.
+//!   Top-level declarations (fn, struct, enum, const, import, type, interface)
+//!   accumulate across cells — later cells can reference structs and functions
+//!   defined in earlier cells.
+//!
+//!   Bare statements and expressions are wrapped in fn main() for the current
+//!   cell only and are NOT accumulated.  This means re-running or editing a
+//!   cell never causes "already defined" / redeclaration errors from stale
+//!   earlier runs.  On each execute_request the kernel synthesises a complete
+//!   .v source file and runs it via `v run <tmpfile>`.
 //!
 //! Rich dump() output:
 //!   The kernel post-processes stdout to detect V's dump() output format:
@@ -194,10 +199,9 @@ impl ConnectionInfo {
 /// Accumulated kernel state across cells.
 #[derive(Debug, Default)]
 struct KernelState {
-    /// Top-level declarations seen so far (fn, struct, enum, …)
+    /// Top-level declarations seen so far (fn, struct, enum, …).
+    /// These accumulate across cells — later cells can use earlier structs/fns.
     declarations: Vec<String>,
-    /// Statements seen so far (executed inside fn main each time)
-    statements: Vec<String>,
     /// Execution counter (shown in Zed as [1], [2], …)
     execution_count: u32,
     /// Temporary directory for compiled artefacts
@@ -212,7 +216,6 @@ impl KernelState {
         fs::create_dir_all(&tmp_dir).ok();
         KernelState {
             declarations: Vec::new(),
-            statements: Vec::new(),
             execution_count: 0,
             tmp_dir,
             running_pid: None,
@@ -220,20 +223,28 @@ impl KernelState {
     }
 
     /// Classify and accumulate a cell, then run it.
+    ///
+    /// Declarations (fn, struct, enum, …) are accumulated across cells so
+    /// later cells can reference earlier definitions.
+    ///
+    /// Statements are NOT accumulated — each cell's statements are run once,
+    /// in the context of all prior declarations, and then discarded.  This
+    /// means re-running or editing a cell never causes "already defined"
+    /// errors from stale earlier runs.
+    ///
     /// Returns (stdout, stderr, is_error).
     fn execute(&mut self, code: &str) -> (String, String, bool) {
         self.execution_count += 1;
 
-        let (new_decls, new_stmts) = classify(code);
+        let (new_decls, cell_stmts) = classify(code);
 
-        // Add new declarations and statements to the accumulator
+        // Accumulate only declarations.
         self.declarations.extend(new_decls);
-        self.statements.extend(new_stmts);
 
-        // Build the full source file
-        let source = self.build_source();
+        // Build the full source file for this cell.
+        let source = self.build_source(&cell_stmts);
 
-        // Write to a temp file
+        // Write to a temp file.
         let src_path = self.tmp_dir.join(format!("cell_{}.v", self.execution_count));
         if let Err(e) = fs::write(&src_path, &source) {
             return (String::new(), format!("Failed to write source: {e}"), true);
@@ -243,8 +254,11 @@ impl KernelState {
         run_v(&src_path, self)
     }
 
-    /// Synthesise a complete runnable V source from accumulated state.
-    fn build_source(&self) -> String {
+    /// Synthesise a complete runnable V source.
+    ///
+    /// `cell_stmts` are the statements from the current cell only — they are
+    /// NOT stored on `self` and will not appear in future cells.
+    fn build_source(&self, cell_stmts: &[String]) -> String {
         let mut out = String::new();
 
         let imports: Vec<&str> = self
@@ -276,9 +290,9 @@ impl KernelState {
             out.push_str("\n\n");
         }
 
-        if !self.statements.is_empty() {
+        if !cell_stmts.is_empty() {
             out.push_str("fn main() {\n");
-            for stmt in &self.statements {
+            for stmt in cell_stmts {
                 for line in stmt.lines() {
                     out.push('\t');
                     out.push_str(line);
@@ -310,11 +324,18 @@ struct DumpEntry {
 
 /// Try to parse a line as V dump() output.
 ///
-/// V's dump() writes exactly one line per call in this format:
+/// V has used two different dump() output formats across versions.
+///
+/// Old format (pre-0.4 or so):
 ///   [/path/to/file.v:NN] name = TypeName(value)
 ///
-/// We match the outer bracket prefix, then split on " = " once, then
-/// separate the type from the value using the first '(' and trailing ')'.
+/// Current format (0.4+):
+///   [/path/to/file.v:NN] name: value
+///
+/// We accept both.  The distinguishing heuristic: if the rest-after-bracket
+/// contains " = " before any ":" it's the old format; otherwise it's the
+/// new colon format.  Type information is not included in the new format, so
+/// we leave the type column blank in that case.
 fn parse_dump_line(line: &str) -> Option<DumpEntry> {
     // Must start with '['
     let line = line.trim();
@@ -324,7 +345,16 @@ fn parse_dump_line(line: &str) -> Option<DumpEntry> {
 
     // Find closing ']'
     let bracket_end = line.find(']')?;
-    let location_raw = &line[1..bracket_end]; // e.g. "/abs/path/main.v:12"
+    let location_raw = &line[1..bracket_end]; // e.g. "C:\\...\\cell_1.v:6"
+
+    // The location must end with ":N" where N is a decimal line number.
+    // We use rfind so that Windows drive-letter colons ("C:") are skipped.
+    // The last ':' in the bracket content must be followed only by digits.
+    let last_colon = location_raw.rfind(':')?;
+    let line_num_part = &location_raw[last_colon + 1..];
+    if line_num_part.is_empty() || !line_num_part.chars().all(|c| c.is_ascii_digit()) {
+        return None;
+    }
 
     // Shorten path to basename:line for display
     let location = if let Some(slash) = location_raw.rfind(|c| c == '/' || c == '\\') {
@@ -333,37 +363,48 @@ fn parse_dump_line(line: &str) -> Option<DumpEntry> {
         location_raw.to_string()
     };
 
-    // Rest after "] "
+    // Rest after "] " (trim leading whitespace)
     let rest = line[bracket_end + 1..].trim();
 
-    // Split on " = " (first occurrence only)
-    let eq_pos = rest.find(" = ")?;
-    let name = rest[..eq_pos].trim().to_string();
-    let type_value = rest[eq_pos + 3..].trim();
+    // ── Old format: "name = TypeName(value)" ─────────────────────────────────
+    if let Some(eq_pos) = rest.find(" = ") {
+        let name = rest[..eq_pos].trim().to_string();
+        let type_value = rest[eq_pos + 3..].trim();
 
-    // The type_value is: TypeName(value)  or just  TypeName  for unit types.
-    // Find the first '(' to split type from value.
-    let (typ, value) = if let Some(paren) = type_value.find('(') {
-        let t = type_value[..paren].trim().to_string();
-        // Value is everything between the first '(' and the last ')'
-        let inner = &type_value[paren + 1..];
-        let v = if inner.ends_with(')') {
-            inner[..inner.len() - 1].to_string()
+        let (typ, value) = if let Some(paren) = type_value.find('(') {
+            let t = type_value[..paren].trim().to_string();
+            let inner = &type_value[paren + 1..];
+            let v = if inner.ends_with(')') {
+                inner[..inner.len() - 1].to_string()
+            } else {
+                inner.to_string()
+            };
+            (t, v)
         } else {
-            inner.to_string()
+            (String::new(), type_value.to_string())
         };
-        (t, v)
-    } else {
-        // No parentheses — treat the whole thing as the type, value empty
-        (type_value.to_string(), String::new())
-    };
 
-    Some(DumpEntry {
-        location,
-        name,
-        typ,
-        value,
-    })
+        return Some(DumpEntry { location, name, typ, value });
+    }
+
+    // ── New format: "name: value" ─────────────────────────────────────────────
+    // Split on the FIRST ": " (with space) to avoid splitting on ":" inside
+    // values like struct displays or Windows paths.
+    if let Some(colon_pos) = rest.find(": ") {
+        let name = rest[..colon_pos].trim().to_string();
+        // name must be a valid identifier (non-empty, no spaces)
+        if !name.is_empty() && !name.contains(' ') {
+            let value = rest[colon_pos + 2..].trim().to_string();
+            return Some(DumpEntry {
+                location,
+                name,
+                typ: String::new(), // current V dump() omits the type
+                value,
+            });
+        }
+    }
+
+    None
 }
 
 /// Escape a string for safe inclusion in HTML.
@@ -375,30 +416,39 @@ fn html_escape(s: &str) -> String {
 }
 
 /// Render a list of DumpEntry values as a styled HTML table.
+/// If none of the entries have a type, the type column is omitted entirely.
 fn render_dump_table(entries: &[DumpEntry]) -> String {
-    let mut html = String::from(
+    let show_type = entries.iter().any(|e| !e.typ.is_empty());
+
+    let type_th = if show_type { "<th>type</th>" } else { "" };
+
+    let mut html = format!(
         r#"<style>
-.v-dump{border-collapse:collapse;font-family:monospace;font-size:13px;margin:4px 0}
-.v-dump th{background:#1e1e2e;color:#cdd6f4;padding:4px 10px;text-align:left;font-weight:600;border-bottom:2px solid #45475a}
-.v-dump td{padding:3px 10px;border-bottom:1px solid #313244;vertical-align:top}
-.v-dump tr:last-child td{border-bottom:none}
-.v-dump .loc{color:#6c7086;font-size:11px}
-.v-dump .name{color:#89b4fa;font-weight:600}
-.v-dump .type{color:#a6e3a1}
-.v-dump .val{color:#f5c2e7}
+.v-dump{{border-collapse:collapse;font-family:monospace;font-size:13px;margin:4px 0}}
+.v-dump th{{background:#1e1e2e;color:#cdd6f4;padding:4px 10px;text-align:left;font-weight:600;border-bottom:2px solid #45475a}}
+.v-dump td{{padding:3px 10px;border-bottom:1px solid #313244;vertical-align:top}}
+.v-dump tr:last-child td{{border-bottom:none}}
+.v-dump .loc{{color:#6c7086;font-size:11px}}
+.v-dump .name{{color:#89b4fa;font-weight:600}}
+.v-dump .type{{color:#a6e3a1}}
+.v-dump .val{{color:#f5c2e7}}
 </style>
 <table class="v-dump">
-<thead><tr><th>location</th><th>name</th><th>type</th><th>value</th></tr></thead>
+<thead><tr><th>location</th><th>name</th>{type_th}<th>value</th></tr></thead>
 <tbody>
-"#,
+"#
     );
 
     for e in entries {
+        let type_td = if show_type {
+            format!("<td class=\"type\">{}</td>", html_escape(&e.typ))
+        } else {
+            String::new()
+        };
         html.push_str(&format!(
-            "<tr><td class=\"loc\">{}</td><td class=\"name\">{}</td><td class=\"type\">{}</td><td class=\"val\">{}</td></tr>\n",
+            "<tr><td class=\"loc\">{}</td><td class=\"name\">{}</td>{type_td}<td class=\"val\">{}</td></tr>\n",
             html_escape(&e.location),
             html_escape(&e.name),
-            html_escape(&e.typ),
             html_escape(&e.value),
         ));
     }
@@ -594,7 +644,9 @@ fn run_v(src: &PathBuf, state: &mut KernelState) -> (String, String, bool) {
 
     let stdout = String::from_utf8_lossy(&output.stdout).to_string();
     let stderr = String::from_utf8_lossy(&output.stderr).to_string();
-    let is_error = !output.status.success() && stdout.is_empty() && !stderr.contains("Killed");
+    // Base is_error purely on exit status. Do NOT check stdout.is_empty() —
+    // dump() writes to stderr on success, so stderr is non-empty on normal runs.
+    let is_error = !output.status.success() && !stderr.contains("Killed");
 
     (stdout, stderr, is_error)
 }
@@ -827,8 +879,19 @@ fn main() {
                     s.execution_count
                 };
 
-                // ── Split dump() output from plain stdout ────────────────────
-                let (plain_stdout, dump_entries) = split_dump_output(&raw_stdout);
+                // ── Split dump() lines from stdout AND stderr ─────────────────
+                // V writes dump() output to stderr (not stdout). We intercept
+                // dump lines from both streams and merge them into a single
+                // HTML table, emitted before the plain text output.
+                let (plain_stdout, mut dump_entries) = split_dump_output(&raw_stdout);
+                let (plain_stderr, stderr_dump_entries) = if !is_error {
+                    split_dump_output(&stderr)
+                } else {
+                    // Don't strip dump lines from a genuine compiler error —
+                    // the whole stderr is the error message.
+                    (stderr.clone(), vec![])
+                };
+                dump_entries.extend(stderr_dump_entries);
 
                 // Publish plain stdout stream (non-dump lines)
                 if !plain_stdout.is_empty() && !silent {
@@ -850,10 +913,16 @@ fn main() {
                 // Publish dump() entries as rich HTML display_data
                 if !dump_entries.is_empty() && !silent {
                     let html = render_dump_table(&dump_entries);
-                    // Plain-text fallback: reconstruct the original dump lines
+                    // Plain-text fallback for non-HTML frontends.
                     let plain_fallback = dump_entries
                         .iter()
-                        .map(|e| format!("[{}] {} = {}({})", e.location, e.name, e.typ, e.value))
+                        .map(|e| {
+                            if e.typ.is_empty() {
+                                format!("[{}] {}: {}", e.location, e.name, e.value)
+                            } else {
+                                format!("[{}] {} = {}({})", e.location, e.name, e.typ, e.value)
+                            }
+                        })
                         .collect::<Vec<_>>()
                         .join("\n");
 
@@ -876,6 +945,7 @@ fn main() {
                 }
 
                 // Publish stderr / error
+                // Use plain_stderr (dump lines already extracted above).
                 if is_error && !silent {
                     let stream_msg = JupyterMessage {
                         identities: vec![],
@@ -884,7 +954,7 @@ fn main() {
                         metadata: json!({}),
                         content: json!({
                             "name": "stderr",
-                            "text": stderr
+                            "text": stderr  // full stderr for error messages
                         }),
                         buffers: vec![],
                     };
@@ -906,7 +976,7 @@ fn main() {
                     };
                     let iopub_lock = iopub.lock().unwrap();
                     send_message(&iopub_lock, &error_msg, &key);
-                } else if !stderr.is_empty() && !silent {
+                } else if !plain_stderr.is_empty() && !silent {
                     let stream_msg = JupyterMessage {
                         identities: vec![],
                         header: make_header("stream", &session_id),
@@ -914,7 +984,7 @@ fn main() {
                         metadata: json!({}),
                         content: json!({
                             "name": "stderr",
-                            "text": stderr
+                            "text": plain_stderr  // dump lines stripped
                         }),
                         buffers: vec![],
                     };
