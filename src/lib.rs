@@ -1,4 +1,7 @@
-use zed_extension_api::{self as zed, LanguageServerId, Result};
+use zed_extension_api::{
+    self as zed,
+    LanguageServerId, Result,
+};
 
 // GitHub API endpoint for the latest commit on the fork's added-features branch.
 // We hit the commits endpoint and compare the returned SHA against what

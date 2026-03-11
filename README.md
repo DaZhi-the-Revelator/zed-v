@@ -2,7 +2,7 @@
 
 A comprehensive V language extension for [Zed](https://zed.dev/), powered by [velvet](https://github.com/DaZhi-the-Revelator/velvet) with bug fixes, enhanced hover documentation, and correct symbol renaming.
 
-**Supports V 0.5.1.**
+**Supports V 0.5.3.**
 
 ---
 
@@ -107,7 +107,7 @@ v run build.vsh release
 
 ---
 
-## V 0.5.1 — Breaking Change Notice
+## V 0.5.3 — Breaking Change Notice
 
 > **`x.ttf` rendering module has moved.**
 >
@@ -286,6 +286,8 @@ All tasks run from the directory containing the source file (`$ZED_DIRNAME`) or 
 #### Test functions
 
 Functions named `test_*` get their own gutter arrow and appear individually in the Runnables panel. When you click the gutter arrow next to a specific test function, V Enhanced runs only that test using `v test -run test_name $ZED_FILE`. This enables true TDD workflows where you can iterate on a single test without running the entire file's test suite.
+
+---
 
 ### ✅ Jupyter Kernel & REPL Integration
 
@@ -742,7 +744,7 @@ See the [Installing velvet](#installing-velvet) section above.
 
 ### V Compiler
 
-velvet uses the V compiler for diagnostics and formatting. This extension targets **V 0.5.1**. Install V from [vlang.io](https://vlang.io/).
+velvet uses the V compiler for diagnostics and formatting. This extension targets **V 0.5.3**. Install V from [vlang.io](https://vlang.io/).
 
 If velvet cannot find your V installation automatically, create a project-local config:
 
