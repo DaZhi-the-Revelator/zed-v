@@ -1,6 +1,6 @@
 id = "v-enhanced"
 name = "V Enhanced"
-description = "V language support for Zed — powered by v-analyzer with comprehensive syntax highlighting, intelligent completions, inlay hints, and more"
+description = "V language support for Zed — powered by velvet with comprehensive syntax highlighting, intelligent completions, inlay hints, and more"
 version = "0.5.1"
 schema_version = 1
 authors = ["Ouyang Dazhi <204389009+DaZhi-the-Revelator@users.noreply.github.com>"]
@@ -9,17 +9,17 @@ repository = "https://github.com/DaZhi-the-Revelator/zed-v-enhanced"
 snippets = "snippets.json"
 
 [grammars.v]
-repository = "https://github.com/DaZhi-the-Revelator/tree-sitter-zed"
-commit = "083d71653f19bca59022cf0208428bac69bcdf7f"
+repository = "https://github.com/DaZhi-the-Revelator/tree-sitter-v"
+commit = "TODO: replace with the HEAD commit hash of tree-sitter-v after pushing"
 
-[language_servers.v-analyzer]
-name = "v-analyzer"
+[language_servers.velvet]
+name = "velvet"
 languages = ["V"]
 
-[language_servers.v-analyzer.settings]
+[language_servers.velvet.settings]
 enable_semantic_tokens = "full"
 
-[language_servers.v-analyzer.settings.inlay_hints]
+[language_servers.velvet.settings.inlay_hints]
 enable = true
 enable_type_hints = true
 enable_parameter_name_hints = true

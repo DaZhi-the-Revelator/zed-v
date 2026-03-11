@@ -4,7 +4,7 @@ use zed_extension_api::{self as zed, LanguageServerId, Result};
 // We hit the commits endpoint and compare the returned SHA against what
 // `v-analyzer --version` reports as its build commit.
 const GITHUB_COMMITS_URL: &str =
-    "https://api.github.com/repos/DaZhi-the-Revelator/v-analyzer/commits/added-features";
+    "https://api.github.com/repos/DaZhi-the-Revelator/velvet/commits/main";
 
 // --- Extension state ---------------------------------------------------------
 
@@ -32,12 +32,12 @@ impl zed::Extension for VEnhancedExtension {
         language_server_id: &LanguageServerId,
         worktree: &zed::Worktree,
     ) -> Result<zed::Command> {
-        let binary_path = self.v_analyzer_binary_path(language_server_id, worktree)?;
+        let binary_path = self.velvet_binary_path(language_server_id, worktree)?;
 
         // Run the update check once per session, after we have located the binary.
         if !self.update_check_done {
             self.update_check_done = true;
-            self.check_v_analyzer_update(language_server_id, &binary_path);
+            self.check_velvet_update(language_server_id, &binary_path);
         }
 
         Ok(zed::Command {
@@ -70,7 +70,7 @@ impl zed::Extension for VEnhancedExtension {
 // --- LSP helper methods ------------------------------------------------------
 
 impl VEnhancedExtension {
-    fn v_analyzer_binary_path(
+    fn velvet_binary_path(
         &mut self,
         language_server_id: &LanguageServerId,
         worktree: &zed::Worktree,
@@ -87,17 +87,16 @@ impl VEnhancedExtension {
         );
 
         let binary_name = if cfg!(target_os = "windows") {
-            "v-analyzer.exe"
+            "velvet.exe"
         } else {
-            "v-analyzer"
+            "velvet"
         };
 
         let path = worktree.which(binary_name).ok_or_else(|| {
-            "v-analyzer not found in PATH.\n\n\
-             Please install the forked v-analyzer:\n\
-             git clone --branch added-features --recursive \
-             https://github.com/DaZhi-the-Revelator/v-analyzer\n\
-             cd v-analyzer && v run build.vsh release\n\n\
+            "velvet not found in PATH.\n\n\
+             Please install velvet:\n\
+             git clone --recursive https://github.com/DaZhi-the-Revelator/velvet\n\
+             cd velvet && v run build.vsh release\n\n\
              Then restart Zed."
                 .to_string()
         })?;
@@ -111,18 +110,18 @@ impl VEnhancedExtension {
         Ok(path)
     }
 
-    // --- v-analyzer update check ---------------------------------------------
+    // --- velvet update check -------------------------------------------------
 
-    /// Compare the locally installed v-analyzer's build commit against the
-    /// latest commit SHA on the fork's `added-features` branch via the GitHub
-    /// API.  If they differ, show a Zed notification prompting a rebuild.
+    /// Compare the locally installed velvet's build commit against the
+    /// latest commit SHA on the main branch via the GitHub API.
+    /// If they differ, show a Zed notification prompting a rebuild.
     ///
     /// Failures are silent — a network error or malformed response simply
     /// means no notification is shown.
-    fn check_v_analyzer_update(&self, language_server_id: &LanguageServerId, binary_path: &str) {
+    fn check_velvet_update(&self, language_server_id: &LanguageServerId, binary_path: &str) {
         // 1. Ask the local binary for its version string.
-        //    The forked v-analyzer prints a line like:
-        //      v-analyzer version 0.0.6 (commit abc1234)
+        //    velvet prints a line like:
+        //      velvet version 0.0.6 (commit abc1234)
         //    We extract the 7-character short SHA from that line.
         let local_commit = match self.get_local_commit(binary_path) {
             Some(c) => c,
@@ -151,16 +150,16 @@ impl VEnhancedExtension {
                 language_server_id,
                 &zed::LanguageServerInstallationStatus::Failed(
                     format!(
-                        "v-analyzer is out of date (local: {local_commit}, remote: {remote_prefix}). \
-                         Run: cd v-analyzer && git pull && v run build.vsh release, \
-                         then copy bin/v-analyzer to your PATH and restart Zed."
+                        "velvet is out of date (local: {local_commit}, remote: {remote_prefix}). \
+                         Run: cd velvet && git pull && v run build.vsh release, \
+                         then copy bin/velvet to your PATH and restart Zed."
                     ),
                 ),
             );
         }
     }
 
-    /// Run `v-analyzer --version` and extract the short commit SHA.
+    /// Run `velvet --version` and extract the short commit SHA.
     /// Returns `None` if the binary cannot be run or the output is not parseable.
     fn get_local_commit(&self, binary_path: &str) -> Option<String> {
         let output = std::process::Command::new(binary_path)
@@ -215,7 +214,7 @@ impl VEnhancedExtension {
 
 /// Extract a 7+ character hex commit SHA from a version string line.
 /// Handles patterns like:
-///   "v-analyzer version 0.0.6 (commit abc1234)"
+///   "velvet version 0.0.6 (commit abc1234)"
 ///   "build commit: abc1234def"
 ///   "abc1234"  (bare)
 fn extract_commit_sha(line: &str) -> Option<String> {

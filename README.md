@@ -1,6 +1,6 @@
 # V Enhanced — Language Support for Zed
 
-A comprehensive V language extension for [Zed](https://zed.dev/), powered by a custom fork of [v-analyzer](https://github.com/DaZhi-the-Revelator/v-analyzer/tree/added-features) with bug fixes, enhanced hover documentation, and correct symbol renaming.
+A comprehensive V language extension for [Zed](https://zed.dev/), powered by [velvet](https://github.com/DaZhi-the-Revelator/velvet) with bug fixes, enhanced hover documentation, and correct symbol renaming.
 
 **Supports V 0.5.1.**
 
@@ -8,9 +8,9 @@ A comprehensive V language extension for [Zed](https://zed.dev/), powered by a c
 
 ## Table of Contents
 
-- [⚠️ Important: Forked v-analyzer Required](#%EF%B8%8F-important-forked-v-analyzer-required)
-  - [Why a Fork?](#why-a-fork)
-  - [Installing the Forked v-analyzer](#installing-the-forked-v-analyzer)
+- [⚠️ Important: velvet Required](#%EF%B8%8F-important-velvet-required)
+  - [Why velvet?](#why-velvet)
+  - [Installing velvet](#installing-velvet)
   - [Staying Up to Date](#staying-up-to-date)
 - [Features](#features)
   - [✅ Core Language Intelligence](#-core-language-intelligence)
@@ -19,7 +19,7 @@ A comprehensive V language extension for [Zed](https://zed.dev/), powered by a c
   - [✅ Running Programs (Runnables)](#-running-programs-runnables)
   - [✅ Jupyter Kernel & REPL Integration](#-jupyter-kernel--repl-integration)
   - [✅ Rich dump() Output in REPL](#-rich-dump-output-in-repl)
-  - [✅ Automatic v-analyzer Update Check](#-automatic-v-analyzer-update-check)
+  - [✅ Automatic velvet Update Check](#-automatic-velvet-update-check)
   - [✅ Syntax Highlighting](#-syntax-highlighting)
   - [✅ Rainbow Brackets (Optional)](#-rainbow-brackets-optional)
   - [✅ Code Snippets](#-code-snippets)
@@ -28,7 +28,7 @@ A comprehensive V language extension for [Zed](https://zed.dev/), powered by a c
   - [✅ Block Comment Toggle](#-block-comment-toggle)
   - [✅ Feature Toggles](#-feature-toggles)
 - [Requirements](#requirements)
-  - [Forked v-analyzer (Required)](#forked-v-analyzer-required)
+  - [velvet (Required)](#velvet-required)
   - [V Compiler](#v-compiler)
   - [Jupyter Kernel (Optional)](#jupyter-kernel-optional)
 - [Migrating from the Standard V Extension](#migrating-from-the-standard-v-extension)
@@ -39,10 +39,10 @@ A comprehensive V language extension for [Zed](https://zed.dev/), powered by a c
 - [Installation](#installation)
   - [Development Installation](#development-installation)
 - [Configuration](#configuration)
-  - [Per-Project v-analyzer Config](#per-project-v-analyzer-config)
+  - [Per-Project velvet Config](#per-project-velvet-config)
 - [Project Structure](#project-structure)
 - [Troubleshooting](#troubleshooting)
-  - [v-analyzer not found](#v-analyzer-not-found)
+  - [velvet not found](#velvet-not-found)
   - [Server crashes on enum hover](#server-crashes-on-enum-hover)
   - [Rename only updates one occurrence](#rename-only-updates-one-occurrence)
   - [No diagnostics / formatting not working](#no-diagnostics--formatting-not-working)
@@ -50,7 +50,7 @@ A comprehensive V language extension for [Zed](https://zed.dev/), powered by a c
   - [Jupyter kernel not appearing in Zed](#jupyter-kernel-not-appearing-in-zed)
   - [Build script says "Cargo.toml or src\lib.rs has error"](#build-script-says-cargotoml-or-srclibrs-has-error--wasm-file-not-produced)
   - [Features stopped working after a Zed update](#features-stopped-working-after-a-zed-update)
-  - [v-analyzer update notification keeps appearing](#v-analyzer-update-notification-keeps-appearing)
+  - [velvet update notification keeps appearing](#velvet-update-notification-keeps-appearing)
   - [Settings don't seem to apply](#settings-dont-seem-to-apply)
   - [Checking logs](#checking-logs)
 - [Links](#links)
@@ -58,40 +58,40 @@ A comprehensive V language extension for [Zed](https://zed.dev/), powered by a c
 
 ---
 
-## ⚠️ Important: Forked v-analyzer Required
+## ⚠️ Important: velvet Required
 
-This extension requires the **forked v-analyzer** — not the upstream version. The fork contains critical fixes and feature additions that are not in the official release.
+This extension requires **velvet** as its language server. velvet contains critical fixes and feature additions that are not in the upstream v-analyzer.
 
-### Why a Fork?
+### Why velvet?
 
-The upstream v-analyzer is missing some features/settings to align with this new enhanced Zed extension.
+velvet is a fork of v-analyzer with bug fixes and enhancements purpose-built to support this extension. The upstream v-analyzer is missing features and has bugs that prevent this extension from working correctly.
 
-### Installing the Forked v-analyzer
+### Installing velvet
 
 Clone and build from source:
 
 ```sh
-git clone --branch added-features --recursive https://github.com/DaZhi-the-Revelator/v-analyzer
-cd v-analyzer
+git clone --recurse-submodules https://github.com/DaZhi-the-Revelator/velvet
+cd velvet
 v run build.vsh release
 ```
 
-The build script places the binary at `./bin/v-analyzer` (or `./bin/v-analyzer.exe` on Windows). Copy it to a location on your `PATH`, for example:
+The build script places the binary at `./bin/velvet` (or `./bin/velvet.exe` on Windows). Copy it to a location on your `PATH`, for example:
 
 ```sh
 # Linux / macOS
-cp bin/v-analyzer ~/.local/bin/v-analyzer
+cp bin/velvet ~/.local/bin/velvet
 
-# Windows (PowerShell — run from the v-analyzer directory)
-Copy-Item .\bin\v-analyzer.exe "$env:USERPROFILE\.config\v-analyzer\bin\v-analyzer.exe"
+# Windows (PowerShell — run from the velvet directory)
+Copy-Item .\bin\velvet.exe "$env:USERPROFILE\.config\velvet\bin\velvet.exe"
 # Ensure that directory is on your PATH
 ```
 
 **Verify:**
 
 ```sh
-v-analyzer --version
-# Should print: v-analyzer version 0.0.6
+velvet --version
+# Should print: velvet version 0.0.6
 ```
 
 ### Staying Up to Date
@@ -99,9 +99,9 @@ v-analyzer --version
 Pull the latest fixes and rebuild:
 
 ```sh
-cd v-analyzer        # your clone of the fork
+cd velvet
 git pull
-v run build.vsh
+v run build.vsh release
 # then copy the binary to PATH as above
 ```
 
@@ -124,13 +124,13 @@ v run build.vsh
 >
 > The base `x.ttf` module remains available for non-rendering TTF utilities. Only the sokol
 > CPU-rendering surface has moved to `x.ttf.render_sokol`. After updating V to 0.5.1, re-run
-> `v-analyzer` against your project to refresh the stub index.
+> `velvet` against your project to refresh the stub index.
 
 ---
 
 ## Features
 
-All LSP intelligence is provided by the forked v-analyzer. This extension wires every capability into Zed natively and adds the full Zed-specific layer on top.
+All LSP intelligence is provided by velvet. This extension wires every capability into Zed natively and adds the full Zed-specific layer on top.
 
 ---
 
@@ -220,7 +220,7 @@ All LSP intelligence is provided by the forked v-analyzer. This extension wires 
 - **Selection Range** — Structural selection expansion via **Alt+Shift+→** (Expand Selection):
   - Each press grows the selection one syntactic level outward
   - Follows the actual V parse tree: identifier → expression → argument list → call → statement → block → function body → file
-  - Implemented in the forked v-analyzer via `textDocument/selectionRange`
+  - Implemented in velvet via `textDocument/selectionRange`
 - **Document Symbols** — Full nested symbol tree in the outline panel:
   - Functions and methods (with signature as detail)
   - Structs (with their fields nested inside)
@@ -437,7 +437,7 @@ println(distance(p1, p3))  // → 10.0
 
 #### Kernel Limitations
 
-- **No autocomplete in notebooks** — completion comes from v-analyzer via LSP, not the kernel; works in `.v` files, not in `.ipynb` notebooks
+- **No autocomplete in notebooks** — completion comes from velvet via LSP, not the kernel; works in `.v` files, not in `.ipynb` notebooks
 - **Recompilation on every cell** — the full accumulated program is recompiled each time; V is fast, but long sessions accumulate more code to compile
 - **Interrupt support** — `Ctrl+C` sends `interrupt_request`; the kernel forwards SIGINT (Unix) or `TerminateProcess` (Windows) to the running `v run` child process and returns the kernel to idle
 - **No arbitrary rich display** — only `dump()` output is rendered as HTML; for general rich output, V has no equivalent of IPython's `display()` machinery
@@ -472,21 +472,21 @@ No changes to your V code are needed — `dump()` works exactly as before; the k
 
 ---
 
-### ✅ Automatic v-analyzer Update Check
+### ✅ Automatic velvet Update Check
 
 Every time the extension activates (i.e. when you open a `.v` file and the language server starts), the extension silently:
 
-1. Runs `v-analyzer --version` to read the local binary's build commit SHA.
-2. Fetches the latest commit SHA from the fork's `added-features` branch via the GitHub API.
+1. Runs `velvet --version` to read the local binary's build commit SHA.
+2. Fetches the latest commit SHA from the velvet repo via the GitHub API.
 3. Compares the first 7 characters of both SHAs.
 
 If they differ, a notice appears in the Zed language-server status bar:
 
-> v-analyzer is out of date (local: `abc1234`, remote: `def5678`). Run: `cd v-analyzer && git pull && v run build.vsh release`, then copy `bin/v-analyzer` to your PATH and restart Zed.
+> velvet is out of date (local: `abc1234`, remote: `def5678`). Run: `cd velvet && git pull && v run build.vsh release`, then copy `bin/velvet` to your PATH and restart Zed.
 
 If the versions already match, or if the check fails for any reason (no network, API rate limit, etc.), nothing is shown. The check runs at most once per session and never blocks the language server from starting.
 
-This addresses the silent breakage that can occur when Zed updates and the locally installed v-analyzer binary lags behind.
+This addresses the silent breakage that can occur when Zed updates and the locally installed velvet binary lags behind.
 
 ---
 
@@ -701,11 +701,11 @@ Double-click selects complete V identifiers including underscores — `snake_cas
 
 ### ✅ Feature Toggles
 
-All v-analyzer features can be individually enabled or disabled via your Zed `settings.json`. Changes take effect after a full Zed restart.
+All velvet features can be individually enabled or disabled via your Zed `settings.json`. Changes take effect after a full Zed restart.
 
 ```json
 "lsp": {
-  "v-analyzer": {
+  "velvet": {
     "initialization_options": {
       "inlay_hints": {
         "enable": true,
@@ -734,23 +734,23 @@ All v-analyzer features can be individually enabled or disabled via your Zed `se
 
 ## Requirements
 
-### Forked v-analyzer (Required)
+### velvet (Required)
 
-See the [Installing the Forked v-analyzer](#installing-the-forked-v-analyzer) section above.
+See the [Installing velvet](#installing-velvet) section above.
 
 > **Do not use the upstream v-analyzer.** It will crash on enum hover and produce incorrect rename results.
 
 ### V Compiler
 
-v-analyzer uses the V compiler for diagnostics and formatting. This extension targets **V 0.5.1**. Install V from [vlang.io](https://vlang.io/).
+velvet uses the V compiler for diagnostics and formatting. This extension targets **V 0.5.1**. Install V from [vlang.io](https://vlang.io/).
 
-If v-analyzer cannot find your V installation automatically, create a project-local config:
+If velvet cannot find your V installation automatically, create a project-local config:
 
 ```sh
-v-analyzer init
+velvet init
 ```
 
-Then set `custom_vroot` in the generated `.v-analyzer/config.toml`.
+Then set `custom_vroot` in the generated `.velvet/config.toml`.
 
 ### Jupyter Kernel (Optional)
 
@@ -830,9 +830,9 @@ Leave any other unrelated settings intact.
 
 ### Step 4 — Install V Enhanced
 
-With the old extension and server fully removed, follow the [Installation](#installation) instructions below. Install the forked v-analyzer as described in [Installing the Forked v-analyzer](#installing-the-forked-v-analyzer) — **do not reuse any VLS binary or configuration**.
+With the old extension and server fully removed, follow the [Installation](#installation) instructions below. Install velvet as described in [Installing velvet](#installing-velvet) — **do not reuse any VLS binary or configuration**.
 
-After restarting Zed with V Enhanced active, open a `.v` file and confirm in **View → Zed Log** that `v-analyzer` (not `vls`) is the language server that started.
+After restarting Zed with V Enhanced active, open a `.v` file and confirm in **View → Zed Log** that `velvet` (not `vls`) is the language server that started.
 
 ---
 
@@ -870,22 +870,22 @@ After restarting Zed with V Enhanced active, open a `.v` file and confirm in **V
 
 ## Configuration
 
-### Per-Project v-analyzer Config
+### Per-Project velvet Config
 
 Create a local config at your project root for project-specific settings:
 
 ```sh
-v-analyzer init
+velvet init
 ```
 
-This creates `.v-analyzer/config.toml`. Key settings:
+This creates `.velvet/config.toml`. Key settings:
 
 ```toml
-# Path to your V installation (if v-analyzer can't find it automatically)
+# Path to your V installation (if velvet can't find it automatically)
 custom_vroot = "/path/to/v"
 
 # Custom cache directory
-custom_cache_dir = ".v-analyzer/cache"
+custom_cache_dir = ".velvet/cache"
 
 # Semantic tokens mode: "full", "syntax", or "none"
 enable_semantic_tokens = "full"
@@ -900,7 +900,7 @@ enable_constant_type_hints = true
 enable_enum_field_value_hints = true
 ```
 
-A global config also exists at `~/.config/v-analyzer/config.toml` and applies to all projects.
+A global config also exists at `~/.config/velvet/config.toml` and applies to all projects.
 
 ---
 
@@ -943,25 +943,24 @@ v-enhanced/
 
 ## Troubleshooting
 
-### v-analyzer not found
+### velvet not found
 
-- Confirm it is in your PATH: `where v-analyzer` (Windows) / `which v-analyzer` (Linux/Mac)
-- Make sure you are using **the fork**, not the upstream version
-- Build and install from: `https://github.com/DaZhi-the-Revelator/v-analyzer`
+- Confirm it is in your PATH: `where velvet` (Windows) / `which velvet` (Linux/Mac)
+- Build and install from: `https://github.com/DaZhi-the-Revelator/velvet`
 - Restart Zed after installing
 
 ### Server crashes on enum hover
 
-- You are using the upstream v-analyzer — install the fork (see above)
+- You are using the upstream v-analyzer — install velvet instead (see above)
 
 ### Rename only updates one occurrence
 
-- You are using the upstream v-analyzer — install the fork (see above)
+- You are using the upstream v-analyzer — install velvet instead (see above)
 
 ### No diagnostics / formatting not working
 
-- v-analyzer needs the V compiler: confirm `v` is in PATH or set `custom_vroot` in config
-- Run `v-analyzer init` in your project root and set `custom_vroot` in the generated config
+- velvet needs the V compiler: confirm `v` is in PATH or set `custom_vroot` in config
+- Run `velvet init` in your project root and set `custom_vroot` in the generated config
 
 ### Indexing is slow on first open
 
@@ -999,12 +998,12 @@ If `rustup target add wasm32-wasip1` reports *"component 'Rust-std' for target '
 ### Features stopped working after a Zed update
 
 - Rebuild the extension with `build.bat` / `build.sh` and reinstall
-- The automatic update check will show a notification in the status bar if your v-analyzer binary is also out of date — follow its instructions
+- The automatic update check will show a notification in the status bar if your velvet binary is also out of date — follow its instructions
 
-### v-analyzer update notification keeps appearing
+### velvet update notification keeps appearing
 
-- The notification means your local `v-analyzer` binary is behind the `added-features` branch on GitHub
-- Pull and rebuild: `cd v-analyzer && git pull && v run build.vsh release`
+- The notification means your local `velvet` binary is behind the main branch on GitHub
+- Pull and rebuild: `cd velvet && git pull && v run build.vsh release`
 - Copy the new binary to your PATH and do a full Zed restart
 - If you intentionally want to stay on an older build, you can ignore the notification — it appears at most once per session and never prevents the language server from starting
 
@@ -1015,14 +1014,15 @@ If `rustup target add wasm32-wasip1` reports *"component 'Rust-std' for target '
 ### Checking logs
 
 - Zed menu → View → Zed Log
-- Look for `v-analyzer` entries to see initialization and request details
+- Look for `velvet` entries to see initialization and request details
 
 ---
 
 ## Links
 
 - [V Language](https://vlang.io/)
-- [Forked v-analyzer (required)](https://github.com/DaZhi-the-Revelator/v-analyzer/tree/added-features)
+- [velvet (language server)](https://github.com/DaZhi-the-Revelator/velvet)
+- [tree-sitter-v (V grammar)](https://github.com/DaZhi-the-Revelator/tree-sitter-v)
 - [Upstream v-analyzer](https://github.com/vlang/v-analyzer)
 - [Zed Editor](https://zed.dev/)
 - [Zed REPL Docs](https://zed.dev/docs/repl)

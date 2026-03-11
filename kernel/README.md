@@ -39,7 +39,7 @@ println(distance(p1, p2))  // → 5.0
 
 V's `dump()` already returns structured data — name, type, and value — on a single line:
 
-```
+```txt
 [main.v:8] x = int(42)
 ```
 
@@ -105,6 +105,7 @@ chmod +x install.sh
 ```
 
 Both scripts:
+
 1. Run `cargo build --release`
 2. Copy the `v-kernel` binary to `~/.cargo/bin/`
 3. Install the Jupyter kernelspec to the correct location
@@ -152,7 +153,7 @@ println(y)  // → 2.0
 
 ## Architecture
 
-```
+```txt
 v-kernel/
 ├── src/
 │   └── main.rs       # Full kernel implementation
@@ -177,7 +178,7 @@ v-kernel/
 
 ## Limitations
 
-- **No autocomplete / introspection** — the kernel runs code but does not expose completion or inspection endpoints (those come from v-analyzer via the LSP, which works independently)
+- **No autocomplete / introspection** — the kernel runs code but does not expose completion or inspection endpoints (those come from velvet via the LSP, which works independently)
 - **Re-execution overhead** — the full accumulated program is recompiled on every cell execution; V is fast, but deep sessions will accumulate latency
 - **Interrupt support** — `Ctrl+C` sends `interrupt_request`; the kernel forwards SIGINT (Unix) or `TerminateProcess` (Windows) to the running `v run` child process and returns the kernel to idle
 - **dump() table is render-only** — Zed's "copy output" and "open in buffer" actions apply to plain stream messages only; the HTML table uses `display_data` which Zed does not currently expose those actions for. A `text/plain` fallback is included for non-HTML frontends. This is a Zed frontend limitation.
