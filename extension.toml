@@ -10,7 +10,7 @@ snippets = "snippets.json"
 
 [grammars.v]
 repository = "https://github.com/DaZhi-the-Revelator/tree-sitter-v"
-commit = "TODO: replace with the HEAD commit hash of tree-sitter-v after pushing"
+commit = "263b46e67d6e9d8c859ae5f85557800a684430c2"
 
 [language_servers.velvet]
 name = "velvet"
