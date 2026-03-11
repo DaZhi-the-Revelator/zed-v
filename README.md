@@ -18,6 +18,8 @@ A comprehensive V language extension for [Zed](https://zed.dev/), powered by a c
   - [✅ v.mod Manifest Support](#-vmod-manifest-support)
   - [✅ Running Programs (Runnables)](#-running-programs-runnables)
   - [✅ Jupyter Kernel & REPL Integration](#-jupyter-kernel--repl-integration)
+  - [✅ Rich dump() Output in REPL](#-rich-dump-output-in-repl)
+  - [✅ Automatic v-analyzer Update Check](#-automatic-v-analyzer-update-check)
   - [✅ Syntax Highlighting](#-syntax-highlighting)
   - [✅ Rainbow Brackets (Optional)](#-rainbow-brackets-optional)
   - [✅ Code Snippets](#-code-snippets)
@@ -48,6 +50,7 @@ A comprehensive V language extension for [Zed](https://zed.dev/), powered by a c
   - [Jupyter kernel not appearing in Zed](#jupyter-kernel-not-appearing-in-zed)
   - [Build script says "Cargo.toml or src\lib.rs has error"](#build-script-says-cargotoml-or-srclibrs-has-error--wasm-file-not-produced)
   - [Features stopped working after a Zed update](#features-stopped-working-after-a-zed-update)
+  - [v-analyzer update notification keeps appearing](#v-analyzer-update-notification-keeps-appearing)
   - [Settings don't seem to apply](#settings-dont-seem-to-apply)
   - [Checking logs](#checking-logs)
 - [Links](#links)
@@ -435,7 +438,52 @@ println(distance(p1, p3))  // → 10.0
 - **No autocomplete in notebooks** — completion comes from v-analyzer via LSP, not the kernel; works in `.v` files, not in `.ipynb` notebooks
 - **Recompilation on every cell** — the full accumulated program is recompiled each time; V is fast, but long sessions accumulate more code to compile
 - **Interrupt support** — `Ctrl+C` sends `interrupt_request`; the kernel forwards SIGINT (Unix) or `TerminateProcess` (Windows) to the running `v run` child process and returns the kernel to idle
-- **Plain text output only** — no rich display (images, HTML, etc.); V has no equivalent of IPython's `display()` machinery
+- **No arbitrary rich display** — only `dump()` output is rendered as HTML; for general rich output, V has no equivalent of IPython's `display()` machinery
+
+---
+
+### ✅ Rich dump() Output in REPL
+
+`dump()` calls are automatically intercepted by the kernel and rendered as a styled HTML table in the Zed REPL output panel.
+
+V's `dump()` already returns structured information on each call:
+
+```
+[main.v:8] x = int(42)
+```
+
+The kernel parses this output format and emits a `display_data` Jupyter message with `text/html` MIME data. The result is a colour-coded table with columns **location · name · type · value**, styled to match Catppuccin Mocha. A `text/plain` fallback is included for non-HTML frontends.
+
+All other output (`println`, `print`, `eprintln`, etc.) continues to appear as plain stream text — only `dump()` lines are intercepted.
+
+```v
+// Cell — mix of dump() and plain output
+x := 42
+name := 'world'
+println('hello')  // → plain stream text: "hello"
+dump(x)           // → HTML table row: main.v:4 | x | int | 42
+dump(name)        // → HTML table row: main.v:5 | name | string | world
+```
+
+No changes to your V code are needed — `dump()` works exactly as before; the kernel makes it look better in the REPL.
+
+---
+
+### ✅ Automatic v-analyzer Update Check
+
+Every time the extension activates (i.e. when you open a `.v` file and the language server starts), the extension silently:
+
+1. Runs `v-analyzer --version` to read the local binary's build commit SHA.
+2. Fetches the latest commit SHA from the fork's `added-features` branch via the GitHub API.
+3. Compares the first 7 characters of both SHAs.
+
+If they differ, a notice appears in the Zed language-server status bar:
+
+> v-analyzer is out of date (local: `abc1234`, remote: `def5678`). Run: `cd v-analyzer && git pull && v run build.vsh release`, then copy `bin/v-analyzer` to your PATH and restart Zed.
+
+If the versions already match, or if the check fails for any reason (no network, API rate limit, etc.), nothing is shown. The check runs at most once per session and never blocks the language server from starting.
+
+This addresses the silent breakage that can occur when Zed updates and the locally installed v-analyzer binary lags behind.
 
 ---
 
@@ -948,6 +996,14 @@ If `rustup target add wasm32-wasip1` reports *"component 'Rust-std' for target '
 ### Features stopped working after a Zed update
 
 - Rebuild the extension with `build.bat` / `build.sh` and reinstall
+- The automatic update check will show a notification in the status bar if your v-analyzer binary is also out of date — follow its instructions
+
+### v-analyzer update notification keeps appearing
+
+- The notification means your local `v-analyzer` binary is behind the `added-features` branch on GitHub
+- Pull and rebuild: `cd v-analyzer && git pull && v run build.vsh release`
+- Copy the new binary to your PATH and do a full Zed restart
+- If you intentionally want to stay on an older build, you can ignore the notification — it appears at most once per session and never prevents the language server from starting
 
 ### Settings don't seem to apply
 

@@ -15,6 +15,13 @@
 //!   import, type, interface) across cells. Bare statements and expressions are
 //!   wrapped in fn main(). On each execute_request the kernel synthesises a
 //!   complete .v source file and runs it via `v run <tmpfile>`.
+//!
+//! Rich dump() output:
+//!   The kernel post-processes stdout to detect V's dump() output format:
+//!     [module.v:line] name = type(value)
+//!   Matching lines are collected and emitted as a styled HTML table via the
+//!   Jupyter display_data message (MIME type text/html). Non-matching lines
+//!   are forwarded as plain stream output as before.
 
 use chrono::Utc;
 use hmac::{Hmac, Mac};
@@ -196,8 +203,6 @@ struct KernelState {
     /// Temporary directory for compiled artefacts
     tmp_dir: PathBuf,
     /// PID of the currently running `v run` child process, if any.
-    /// Set before blocking on wait_with_output, cleared after. The control
-    /// thread reads this to send SIGINT without needing the Child handle.
     running_pid: Option<u32>,
 }
 
@@ -234,8 +239,7 @@ impl KernelState {
             return (String::new(), format!("Failed to write source: {e}"), true);
         }
 
-        // Run with `v run <file>`, storing the child handle so interrupt_request
-        // can kill it while it's still running.
+        // Run with `v run <file>`
         run_v(&src_path, self)
     }
 
@@ -243,7 +247,6 @@ impl KernelState {
     fn build_source(&self) -> String {
         let mut out = String::new();
 
-        // Collect imports from declarations so they appear at the top
         let imports: Vec<&str> = self
             .declarations
             .iter()
@@ -258,7 +261,6 @@ impl KernelState {
             .map(|s| s.as_str())
             .collect();
 
-        // module main is implicit in v run, but being explicit avoids warnings
         out.push_str("module main\n\n");
 
         for imp in &imports {
@@ -274,11 +276,9 @@ impl KernelState {
             out.push_str("\n\n");
         }
 
-        // Wrap statements in fn main()
         if !self.statements.is_empty() {
             out.push_str("fn main() {\n");
             for stmt in &self.statements {
-                // Indent each line
                 for line in stmt.lines() {
                     out.push('\t');
                     out.push_str(line);
@@ -298,16 +298,141 @@ impl Drop for KernelState {
     }
 }
 
+// ── dump() rich output ────────────────────────────────────────────────────────
+
+/// A single parsed dump() entry.
+struct DumpEntry {
+    location: String, // e.g. "main.v:12"
+    name: String,     // variable / expression name
+    typ: String,      // V type string
+    value: String,    // printed value
+}
+
+/// Try to parse a line as V dump() output.
+///
+/// V's dump() writes exactly one line per call in this format:
+///   [/path/to/file.v:NN] name = TypeName(value)
+///
+/// We match the outer bracket prefix, then split on " = " once, then
+/// separate the type from the value using the first '(' and trailing ')'.
+fn parse_dump_line(line: &str) -> Option<DumpEntry> {
+    // Must start with '['
+    let line = line.trim();
+    if !line.starts_with('[') {
+        return None;
+    }
+
+    // Find closing ']'
+    let bracket_end = line.find(']')?;
+    let location_raw = &line[1..bracket_end]; // e.g. "/abs/path/main.v:12"
+
+    // Shorten path to basename:line for display
+    let location = if let Some(slash) = location_raw.rfind(|c| c == '/' || c == '\\') {
+        location_raw[slash + 1..].to_string()
+    } else {
+        location_raw.to_string()
+    };
+
+    // Rest after "] "
+    let rest = line[bracket_end + 1..].trim();
+
+    // Split on " = " (first occurrence only)
+    let eq_pos = rest.find(" = ")?;
+    let name = rest[..eq_pos].trim().to_string();
+    let type_value = rest[eq_pos + 3..].trim();
+
+    // The type_value is: TypeName(value)  or just  TypeName  for unit types.
+    // Find the first '(' to split type from value.
+    let (typ, value) = if let Some(paren) = type_value.find('(') {
+        let t = type_value[..paren].trim().to_string();
+        // Value is everything between the first '(' and the last ')'
+        let inner = &type_value[paren + 1..];
+        let v = if inner.ends_with(')') {
+            inner[..inner.len() - 1].to_string()
+        } else {
+            inner.to_string()
+        };
+        (t, v)
+    } else {
+        // No parentheses — treat the whole thing as the type, value empty
+        (type_value.to_string(), String::new())
+    };
+
+    Some(DumpEntry {
+        location,
+        name,
+        typ,
+        value,
+    })
+}
+
+/// Escape a string for safe inclusion in HTML.
+fn html_escape(s: &str) -> String {
+    s.replace('&', "&amp;")
+        .replace('<', "&lt;")
+        .replace('>', "&gt;")
+        .replace('"', "&quot;")
+}
+
+/// Render a list of DumpEntry values as a styled HTML table.
+fn render_dump_table(entries: &[DumpEntry]) -> String {
+    let mut html = String::from(
+        r#"<style>
+.v-dump{border-collapse:collapse;font-family:monospace;font-size:13px;margin:4px 0}
+.v-dump th{background:#1e1e2e;color:#cdd6f4;padding:4px 10px;text-align:left;font-weight:600;border-bottom:2px solid #45475a}
+.v-dump td{padding:3px 10px;border-bottom:1px solid #313244;vertical-align:top}
+.v-dump tr:last-child td{border-bottom:none}
+.v-dump .loc{color:#6c7086;font-size:11px}
+.v-dump .name{color:#89b4fa;font-weight:600}
+.v-dump .type{color:#a6e3a1}
+.v-dump .val{color:#f5c2e7}
+</style>
+<table class="v-dump">
+<thead><tr><th>location</th><th>name</th><th>type</th><th>value</th></tr></thead>
+<tbody>
+"#,
+    );
+
+    for e in entries {
+        html.push_str(&format!(
+            "<tr><td class=\"loc\">{}</td><td class=\"name\">{}</td><td class=\"type\">{}</td><td class=\"val\">{}</td></tr>\n",
+            html_escape(&e.location),
+            html_escape(&e.name),
+            html_escape(&e.typ),
+            html_escape(&e.value),
+        ));
+    }
+
+    html.push_str("</tbody></table>");
+    html
+}
+
+/// Split stdout into (plain_lines, dump_entries).
+/// dump() lines are removed from the plain output and returned separately.
+fn split_dump_output(stdout: &str) -> (String, Vec<DumpEntry>) {
+    let mut plain_lines: Vec<&str> = Vec::new();
+    let mut dump_entries: Vec<DumpEntry> = Vec::new();
+
+    for line in stdout.lines() {
+        if let Some(entry) = parse_dump_line(line) {
+            dump_entries.push(entry);
+        } else {
+            plain_lines.push(line);
+        }
+    }
+
+    // Rebuild plain output, adding back the trailing newline only if the
+    // original had one (to avoid spurious blank lines in Zed).
+    let mut plain = plain_lines.join("\n");
+    if !plain.is_empty() {
+        plain.push('\n');
+    }
+
+    (plain, dump_entries)
+}
+
 // ── V code classifier ─────────────────────────────────────────────────────────
 
-/// Determines which lines are top-level declarations vs. statements.
-/// Returns (declarations, statements).
-///
-/// Top-level in V: fn, struct, interface, enum, type, const, import, __global
-/// Everything else is a statement to be wrapped in fn main().
-///
-/// The classifier is line/block-based rather than a full parser; it works
-/// well for REPL-style usage where cells tend to contain one conceptual unit.
 fn classify(code: &str) -> (Vec<String>, Vec<String>) {
     let mut decls = Vec::new();
     let mut stmts = Vec::new();
@@ -318,35 +443,28 @@ fn classify(code: &str) -> (Vec<String>, Vec<String>) {
     while i < lines.len() {
         let trimmed = lines[i].trim();
 
-        // Skip blank lines and comments at the top level
         if trimmed.is_empty() || trimmed.starts_with("//") || trimmed.starts_with("/*") {
             i += 1;
             continue;
         }
 
-        // Shebang
         if trimmed.starts_with("#!") {
             i += 1;
             continue;
         }
 
-        // module clause — skip (we add it ourselves)
         if trimmed.starts_with("module ") {
             i += 1;
             continue;
         }
 
-        // Detect top-level declaration starters
         let is_decl = is_top_level_decl(trimmed);
 
         if is_decl {
-            // Collect the whole block (up to the matching closing brace, or
-            // a single line for import/type statements)
             let (block, consumed) = collect_block(&lines, i);
             decls.push(block);
             i += consumed;
         } else {
-            // It's a statement / expression
             let (block, consumed) = collect_statement(&lines, i);
             stmts.push(block);
             i += consumed;
@@ -356,16 +474,12 @@ fn classify(code: &str) -> (Vec<String>, Vec<String>) {
     (decls, stmts)
 }
 
-/// Returns true if a line looks like the start of a top-level declaration.
 fn is_top_level_decl(line: &str) -> bool {
-    // Strip pub/mut/static modifiers before checking
     let stripped = line
         .trim_start_matches("pub ")
         .trim_start_matches("mut ")
         .trim_start_matches("static ");
 
-    // Strip attribute lines — they belong to the declaration that follows,
-    // so we treat the attribute itself as "part of a declaration start"
     if stripped.starts_with('[') || stripped.starts_with("@[") {
         return true;
     }
@@ -384,17 +498,13 @@ fn is_top_level_decl(line: &str) -> bool {
     keywords.iter().any(|kw| stripped.starts_with(kw))
 }
 
-/// Collect a brace-delimited block (or a single-line statement) starting at
-/// line index `start`. Returns (source, lines_consumed).
 fn collect_block(lines: &[&str], start: usize) -> (String, usize) {
     let first = lines[start];
 
-    // Single-line declarations (import, single-line type alias)
     if !first.contains('{') {
         return (first.to_string(), 1);
     }
 
-    // Multi-line: count braces
     let mut depth = 0i32;
     let mut collected = Vec::new();
     let mut i = start;
@@ -418,9 +528,6 @@ fn collect_block(lines: &[&str], start: usize) -> (String, usize) {
     (collected.join("\n"), i - start)
 }
 
-/// Collect a statement starting at `start`. For simple one-liners this is
-/// just that line. For multi-line expressions (e.g. `if … { … }`) we collect
-/// the full block.
 fn collect_statement(lines: &[&str], start: usize) -> (String, usize) {
     let first = lines[start];
 
@@ -428,7 +535,6 @@ fn collect_statement(lines: &[&str], start: usize) -> (String, usize) {
         return (first.to_string(), 1);
     }
 
-    // Multi-line statement — count braces
     let mut depth = 0i32;
     let mut collected = Vec::new();
     let mut i = start;
@@ -454,9 +560,6 @@ fn collect_statement(lines: &[&str], start: usize) -> (String, usize) {
 
 // ── V runner ─────────────────────────────────────────────────────────────────
 
-/// Execute a V source file and return (stdout, stderr, is_error).
-/// Stores the child handle in `state.running_child` while running so that
-/// an `interrupt_request` arriving on the control socket can kill it.
 fn run_v(src: &PathBuf, state: &mut KernelState) -> (String, String, bool) {
     let mut cmd = Command::new("v");
     cmd.arg("run")
@@ -491,8 +594,6 @@ fn run_v(src: &PathBuf, state: &mut KernelState) -> (String, String, bool) {
 
     let stdout = String::from_utf8_lossy(&output.stdout).to_string();
     let stderr = String::from_utf8_lossy(&output.stderr).to_string();
-    // Treat SIGINT exit (status 2 on Unix, 1 on Windows) as non-error so
-    // an interrupted cell doesn't spam the error panel.
     let is_error = !output.status.success() && stdout.is_empty() && !stderr.contains("Killed");
 
     (stdout, stderr, is_error)
@@ -500,11 +601,9 @@ fn run_v(src: &PathBuf, state: &mut KernelState) -> (String, String, bool) {
 
 // ── Process interrupt ───────────────────────────────────────────────────────
 
-/// Send SIGINT (Unix) or TerminateProcess (Windows) to the given PID.
 fn interrupt_process(pid: u32) {
     #[cfg(unix)]
     {
-        // SAFETY: kill(2) is always safe to call with a valid PID and signal number.
         unsafe {
             libc::kill(pid as libc::pid_t, libc::SIGINT);
         }
@@ -600,8 +699,6 @@ fn main() {
     // ── Shared state ──────────────────────────────────────────────────────────
     let state = Arc::new(Mutex::new(KernelState::new()));
 
-    // ── IOPub helper (clone Arc for use in closures) ──────────────────────────
-    // We share iopub via Arc<Mutex<Socket>> so shell handler can send on it.
     let iopub = Arc::new(Mutex::new(iopub));
 
     // ── Control thread ────────────────────────────────────────────────────────
@@ -634,7 +731,6 @@ fn main() {
                         }
                     }
                     "interrupt_request" => {
-                        // Kill the running child process if there is one.
                         let pid = state.lock().unwrap().running_pid;
                         if let Some(pid) = pid {
                             interrupt_process(pid);
@@ -701,12 +797,10 @@ fn main() {
                     s.execution_count + 1
                 };
 
-                // Publish "busy" status
                 if !silent {
                     publish_status(&iopub, &key, &session_id, &msg, "busy");
                 }
 
-                // Publish execute_input so Zed shows [N] next to the cell
                 if !silent {
                     let input_msg = JupyterMessage {
                         identities: vec![],
@@ -723,8 +817,7 @@ fn main() {
                     send_message(&iopub, &input_msg, &key);
                 }
 
-                // Run the code
-                let (stdout, stderr, is_error) = {
+                let (raw_stdout, stderr, is_error) = {
                     let mut s = state.lock().unwrap();
                     s.execute(&code)
                 };
@@ -734,8 +827,11 @@ fn main() {
                     s.execution_count
                 };
 
-                // Publish stdout stream
-                if !stdout.is_empty() && !silent {
+                // ── Split dump() output from plain stdout ────────────────────
+                let (plain_stdout, dump_entries) = split_dump_output(&raw_stdout);
+
+                // Publish plain stdout stream (non-dump lines)
+                if !plain_stdout.is_empty() && !silent {
                     let stream_msg = JupyterMessage {
                         identities: vec![],
                         header: make_header("stream", &session_id),
@@ -743,7 +839,7 @@ fn main() {
                         metadata: json!({}),
                         content: json!({
                             "name": "stdout",
-                            "text": stdout
+                            "text": plain_stdout
                         }),
                         buffers: vec![],
                     };
@@ -751,9 +847,36 @@ fn main() {
                     send_message(&iopub, &stream_msg, &key);
                 }
 
+                // Publish dump() entries as rich HTML display_data
+                if !dump_entries.is_empty() && !silent {
+                    let html = render_dump_table(&dump_entries);
+                    // Plain-text fallback: reconstruct the original dump lines
+                    let plain_fallback = dump_entries
+                        .iter()
+                        .map(|e| format!("[{}] {} = {}({})", e.location, e.name, e.typ, e.value))
+                        .collect::<Vec<_>>()
+                        .join("\n");
+
+                    let display_msg = JupyterMessage {
+                        identities: vec![],
+                        header: make_header("display_data", &session_id),
+                        parent_header: msg.header.clone(),
+                        metadata: json!({}),
+                        content: json!({
+                            "data": {
+                                "text/html": html,
+                                "text/plain": plain_fallback
+                            },
+                            "metadata": {}
+                        }),
+                        buffers: vec![],
+                    };
+                    let iopub = iopub.lock().unwrap();
+                    send_message(&iopub, &display_msg, &key);
+                }
+
                 // Publish stderr / error
                 if is_error && !silent {
-                    // Publish to stderr stream
                     let stream_msg = JupyterMessage {
                         identities: vec![],
                         header: make_header("stream", &session_id),
@@ -769,7 +892,6 @@ fn main() {
                     send_message(&iopub_lock, &stream_msg, &key);
                     drop(iopub_lock);
 
-                    // Also publish error message so Zed can show it inline
                     let error_msg = JupyterMessage {
                         identities: vec![],
                         header: make_header("error", &session_id),
@@ -801,7 +923,6 @@ fn main() {
                 }
 
                 // Send execute_reply
-                let _status = if is_error { "error" } else { "ok" };
                 let reply_content = if is_error {
                     json!({
                         "status": "error",
@@ -829,14 +950,12 @@ fn main() {
                 };
                 send_message(&shell, &reply, &key);
 
-                // Publish "idle" status
                 if !silent {
                     publish_status(&iopub, &key, &session_id, &msg, "idle");
                 }
             }
 
             // ── is_complete_request ──────────────────────────────────────────
-            // Zed may send this to check if a cell is syntactically complete.
             "is_complete_request" => {
                 let reply = JupyterMessage {
                     identities: msg.identities.clone(),
@@ -849,7 +968,7 @@ fn main() {
                 send_message(&shell, &reply, &key);
             }
 
-            // ── comm_info_request (notebooks use this for widgets) ───────────
+            // ── comm_info_request ────────────────────────────────────────────
             "comm_info_request" => {
                 let reply = JupyterMessage {
                     identities: msg.identities.clone(),

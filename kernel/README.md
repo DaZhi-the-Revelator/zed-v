@@ -10,7 +10,7 @@ Integrates with [Zed's REPL](https://zed.dev/docs/repl) — press `Ctrl+Shift+En
 `v-kernel` implements the [Jupyter messaging protocol v5.3](https://jupyter-client.readthedocs.io/en/stable/messaging.html) over ZeroMQ.  
 Zed detects it automatically once the kernelspec is installed — no configuration needed.
 
-**Stateful execution across cells:** top-level declarations (`fn`, `struct`, `enum`, `const`, `import`, `type`, `interface`) accumulate across cells in a session. Bare statements and expressions are wrapped in `fn main()` and re-executed together with all prior statements each time. This mirrors how other REPL kernels (e.g. evcxr for Rust) handle compiled languages.
+**Stateful execution across cells:** top-level declarations (`fn`, `struct`, `enum`, `const`, `import`, `type`, `interface`) accumulate across cells in a session. Bare statements and expressions are wrapped in `fn main()` and re-executed together with all prior statements each time.
 
 ```v
 // Cell 1 — declares a struct (accumulated)
@@ -28,6 +28,36 @@ p1 := Point{0, 0}
 p2 := Point{3, 4}
 println(distance(p1, p2))  // → 5.0
 ```
+
+---
+
+## Features
+
+### Rich `dump()` output
+
+`dump()` calls are intercepted and rendered as a styled HTML table in the Zed REPL panel instead of raw text.
+
+V's `dump()` already returns structured data — name, type, and value — on a single line:
+
+```
+[main.v:8] x = int(42)
+```
+
+The kernel parses this format and emits a `display_data` message with `text/html` mime data containing a colour-coded table, taking advantage of Jupyter's rich display protocol. A `text/plain` fallback is also included for non-HTML frontends.
+
+```v
+// Cell
+x := 42
+name := 'world'
+pt := Point{3.0, 4.0}
+dump(x)
+dump(name)
+dump(pt)
+```
+
+Renders as a table with columns: **location · name · type · value** — styled to match Catppuccin Mocha.
+
+Non-`dump()` output (regular `println`, etc.) continues to appear as plain stream text as before.
 
 ---
 
@@ -149,5 +179,4 @@ v-kernel/
 
 - **No autocomplete / introspection** — the kernel runs code but does not expose completion or inspection endpoints (those come from v-analyzer via the LSP, which works independently)
 - **Re-execution overhead** — the full accumulated program is recompiled on every cell execution; V is fast, but deep sessions will accumulate latency
-- **No interrupt** — `Ctrl+C` in Zed will send `interrupt_request`; the kernel does not yet forward SIGINT to the running `v` process
-- **No rich display** — output is plain text/stderr only; V has no equivalent of IPython's `display()` machinery
+- **Interrupt support** — `Ctrl+C` sends `interrupt_request`; the kernel forwards SIGINT (Unix) or `TerminateProcess` (Windows) to the running `v run` child process and returns the kernel to idle
