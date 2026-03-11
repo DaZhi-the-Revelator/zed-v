@@ -37,7 +37,7 @@ impl zed::Extension for VEnhancedExtension {
         // Run the update check once per session, after we have located the binary.
         if !self.update_check_done {
             self.update_check_done = true;
-            self.check_v_analyzer_update(&binary_path);
+            self.check_v_analyzer_update(language_server_id, &binary_path);
         }
 
         Ok(zed::Command {
@@ -119,7 +119,7 @@ impl VEnhancedExtension {
     ///
     /// Failures are silent — a network error or malformed response simply
     /// means no notification is shown.
-    fn check_v_analyzer_update(&self, binary_path: &str) {
+    fn check_v_analyzer_update(&self, language_server_id: &LanguageServerId, binary_path: &str) {
         // 1. Ask the local binary for its version string.
         //    The forked v-analyzer prints a line like:
         //      v-analyzer version 0.0.6 (commit abc1234)
@@ -148,9 +148,7 @@ impl VEnhancedExtension {
 
         if local_commit != remote_prefix {
             zed::set_language_server_installation_status(
-                // Re-use the LSP status bar to surface the message.  We pass a
-                // synthetic LanguageServerId; the label is what Zed shows.
-                &LanguageServerId::from("v-analyzer"),
+                language_server_id,
                 &zed::LanguageServerInstallationStatus::Failed(
                     format!(
                         "v-analyzer is out of date (local: {local_commit}, remote: {remote_prefix}). \
@@ -191,24 +189,20 @@ impl VEnhancedExtension {
     /// Uses the zed_extension_api HTTP client so the request runs inside the
     /// WASM sandbox with Zed's proxy/trust settings.
     fn fetch_remote_commit_sha(&self) -> Option<String> {
-        let request = zed::http_client::HttpRequest {
-            method: zed::http_client::HttpMethod::Get,
-            url: GITHUB_COMMITS_URL.to_string(),
-            headers: vec![
-                // GitHub API requires a User-Agent header.
-                ("User-Agent".to_string(), "zed-v-enhanced".to_string()),
-                ("Accept".to_string(), "application/vnd.github+json".to_string()),
-            ],
-            body: None,
-            redirect_policy: zed::http_client::RedirectPolicy::FollowLimit(3),
-        };
+        let request = zed::http_client::HttpRequest::builder()
+            .method(zed::http_client::HttpMethod::Get)
+            .url(GITHUB_COMMITS_URL)
+            // GitHub API requires a User-Agent header.
+            .header("User-Agent", "zed-v-enhanced")
+            .header("Accept", "application/vnd.github+json")
+            .redirect_policy(zed::http_client::RedirectPolicy::NoFollow)
+            .build()
+            .ok()?;
 
         let response = zed::http_client::fetch(&request).ok()?;
 
-        if response.status_code < 200 || response.status_code >= 300 {
-            return None;
-        }
-
+        // HttpResponse has no status_code field; a successful fetch() means
+        // the request completed — treat an empty body as a signal to abort.
         let body = String::from_utf8(response.body).ok()?;
         // The response is a JSON object; the SHA is at .sha
         let value: zed::serde_json::Value = zed::serde_json::from_str(&body).ok()?;
