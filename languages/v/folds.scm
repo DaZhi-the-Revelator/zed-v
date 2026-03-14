@@ -8,13 +8,12 @@
 (struct_declaration
   (struct_field_scope) @fold)
 
-(interface_declaration
-  "{" @fold.start
-  "}" @fold.end)
+; Interface and enum bodies — fold the entire declaration block.
+; Using a single @fold on the declaration node is the correct Zed API;
+; @fold.start / @fold.end are not supported in the Zed tree-sitter query engine.
+(interface_declaration) @fold
 
-(enum_declaration
-  "{" @fold.start
-  "}" @fold.end)
+(enum_declaration) @fold
 
 (if_expression
   (block) @fold)

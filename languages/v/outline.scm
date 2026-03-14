@@ -52,12 +52,15 @@
 
 ; ── Functions & methods ───────────────────────────────────────────────────────
 
+; Top-level functions only — guard prevents methods matching this pattern too
 (function_declaration
   name: (identifier) @name
   body: (block
     "{" @open
-    "}" @close)) @item
+    "}" @close)
+  (#not-exists? receiver)) @item
 
+; Methods — function declarations that have a receiver
 (function_declaration
   receiver: (receiver)
   name: (identifier) @name

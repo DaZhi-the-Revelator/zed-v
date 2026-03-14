@@ -162,6 +162,7 @@ All LSP intelligence is provided by velvet. This extension wires every capabilit
 - **Hover Information** — Rich markdown documentation for every symbol type:
   - Functions and methods (signature + doc comment + module name)
   - **Structs** — renders the full struct body with fields grouped by access modifier (`pub mut`, `pub`, `mut`, private)
+  - **Interfaces** — renders the full interface body with all methods, fields, and embedded interface names
   - **Enums** — renders all fields with their computed values (implicit auto-increment, explicit values, and `[flag]` bitfield binary representations)
   - Type aliases and sum types (full `type A = B | C` signature)
   - Constants (with value and type)
@@ -478,13 +479,13 @@ No changes to your V code are needed — `dump()` works exactly as before; the k
 
 Every time the extension activates (i.e. when you open a `.v` file and the language server starts), the extension silently:
 
-1. Runs `velvet --version` to read the local binary's build commit SHA.
-2. Fetches the latest commit SHA from the velvet repo via the GitHub API.
-3. Compares the first 7 characters of both SHAs.
+1. Runs `velvet --version` to read the local binary's version string.
+2. Fetches the latest release tag from the velvet repo via the GitHub API.
+3. Compares the two version strings.
 
 If they differ, a notice appears in the Zed language-server status bar:
 
-> velvet is out of date (local: `abc1234`, remote: `def5678`). Run: `cd velvet && git pull && v run build.vsh release`, then copy `bin/velvet` to your PATH and restart Zed.
+> velvet is out of date (local: `0.0.6`, latest release: `0.1.0`). Run: `cd velvet && git pull && v run build.vsh release`, then copy `bin/velvet` to your PATH and restart Zed.
 
 If the versions already match, or if the check fails for any reason (no network, API rate limit, etc.), nothing is shown. The check runs at most once per session and never blocks the language server from starting.
 
@@ -703,7 +704,7 @@ Double-click selects complete V identifiers including underscores — `snake_cas
 
 ### ✅ Feature Toggles
 
-All velvet features can be individually enabled or disabled via your Zed `settings.json`. Changes take effect after a full Zed restart.
+All velvet features can be individually enabled or disabled via your Zed `settings.json`. Changes take effect after a full Zed restart. The below settings are the **default**. You do not need to input these unless you want to change them from shown.
 
 ```json
 "lsp": {
@@ -718,7 +719,14 @@ All velvet features can be individually enabled or disabled via your Zed `settin
         "enable_constant_type_hints": true,
         "enable_enum_field_value_hints": true
       },
-      "enable_semantic_tokens": "full"
+      "enable_semantic_tokens": "full",
+      "code_lens": {
+        "enable": true,
+        "enable_run_lens": true,
+        "enable_inheritors_lens": true,
+        "enable_super_interfaces_lens": true,
+        "enable_run_tests_lens": true
+      }
     }
   }
 }
@@ -726,7 +734,7 @@ All velvet features can be individually enabled or disabled via your Zed `settin
 
 **`enable_semantic_tokens` values:**
 
-| Value | Behaviour |
+| Value | Behavior |
 |-------|-----------|
 | `"full"` | Two-pass: accurate semantic + syntax highlighting (default) |
 | `"syntax"` | Syntax-only pass — faster, recommended for very large files |

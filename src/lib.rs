@@ -3,11 +3,12 @@ use zed_extension_api::{
     LanguageServerId, Result,
 };
 
-// GitHub API endpoint for the latest commit on the fork's added-features branch.
-// We hit the commits endpoint and compare the returned SHA against what
-// `v-analyzer --version` reports as its build commit.
-const GITHUB_COMMITS_URL: &str =
-    "https://api.github.com/repos/DaZhi-the-Revelator/velvet/commits/main";
+// GitHub API endpoint for the latest release tag.
+// We compare the tag name against the version string from `velvet --version`
+// so that only actual releases trigger the update notification, not every
+// commit to main.
+const GITHUB_RELEASES_URL: &str =
+    "https://api.github.com/repos/DaZhi-the-Revelator/velvet/releases/latest";
 
 // --- Extension state ---------------------------------------------------------
 
@@ -65,7 +66,14 @@ impl zed::Extension for VEnhancedExtension {
                 "enable_constant_type_hints": true,
                 "enable_enum_field_value_hints": true
             },
-            "enable_semantic_tokens": "full"
+            "enable_semantic_tokens": "full",
+            "code_lens": {
+                "enable": true,
+                "enable_run_lens": true,
+                "enable_inheritors_lens": true,
+                "enable_super_interfaces_lens": true,
+                "enable_run_tests_lens": true
+            }
         })))
     }
 }
@@ -89,20 +97,29 @@ impl VEnhancedExtension {
             &zed::LanguageServerInstallationStatus::CheckingForUpdate,
         );
 
-        let binary_name = if cfg!(target_os = "windows") {
-            "velvet.exe"
+        // Check lsp.velvet.binary.path from Zed settings.json first.
+        // This lets users point at a non-PATH install without needing to
+        // add it to their shell PATH.
+        let path = if let Ok(lsp_settings) = zed::settings::LspSettings::for_worktree("velvet", worktree) {
+            if let Some(binary) = lsp_settings.binary {
+                if let Some(configured_path) = binary.path {
+                    if std::fs::metadata(&configured_path).is_ok() {
+                        configured_path
+                    } else {
+                        return Err(format!(
+                            "velvet binary not found at configured path: {configured_path}\n\
+                             Check lsp.velvet.binary.path in your Zed settings.json."
+                        ));
+                    }
+                } else {
+                    self.find_velvet_in_path(worktree)?
+                }
+            } else {
+                self.find_velvet_in_path(worktree)?
+            }
         } else {
-            "velvet"
+            self.find_velvet_in_path(worktree)?
         };
-
-        let path = worktree.which(binary_name).ok_or_else(|| {
-            "velvet not found in PATH.\n\n\
-             Please install velvet:\n\
-             git clone --recursive https://github.com/DaZhi-the-Revelator/velvet\n\
-             cd velvet && v run build.vsh release\n\n\
-             Then restart Zed."
-                .to_string()
-        })?;
 
         zed::set_language_server_installation_status(
             language_server_id,
@@ -113,47 +130,56 @@ impl VEnhancedExtension {
         Ok(path)
     }
 
+    fn find_velvet_in_path(&self, worktree: &zed::Worktree) -> Result<String> {
+        let binary_name = if cfg!(target_os = "windows") {
+            "velvet.exe"
+        } else {
+            "velvet"
+        };
+
+        worktree.which(binary_name).ok_or_else(|| {
+            "velvet not found in PATH.\n\n\
+             Please install velvet:\n\
+             git clone --recursive https://github.com/DaZhi-the-Revelator/velvet\n\
+             cd velvet && v run build.vsh release\n\n\
+             Then copy bin/velvet to your PATH, or set lsp.velvet.binary.path in\n\
+             your Zed settings.json."
+                .to_string()
+        })
+    }
+
     // --- velvet update check -------------------------------------------------
 
-    /// Compare the locally installed velvet's build commit against the
-    /// latest commit SHA on the main branch via the GitHub API.
-    /// If they differ, show a Zed notification prompting a rebuild.
+    /// Compare the locally installed velvet's version against the latest
+    /// GitHub release tag. Only actual releases trigger the notification,
+    /// not every commit to main.
     ///
     /// Failures are silent — a network error or malformed response simply
     /// means no notification is shown.
     fn check_velvet_update(&self, language_server_id: &LanguageServerId, binary_path: &str) {
         // 1. Ask the local binary for its version string.
-        //    velvet prints a line like:
-        //      velvet version 0.0.6 (commit abc1234)
-        //    We extract the 7-character short SHA from that line.
-        let local_commit = match self.get_local_commit(binary_path) {
-            Some(c) => c,
-            None => {
-                // Binary didn't print a recognisable version line — skip check.
-                return;
-            }
-        };
-
-        // 2. Fetch the latest commit SHA from GitHub.
-        let remote_sha = match self.fetch_remote_commit_sha() {
-            Some(s) => s,
+        //    velvet prints a line like: velvet version 0.1.0
+        let local_version = match self.get_local_version(binary_path) {
+            Some(v) => v,
             None => return,
         };
 
-        // 3. Compare.  GitHub returns the full 40-char SHA; the binary prints
-        //    a 7-char prefix.  We compare only the first 7 chars.
-        let remote_prefix = if remote_sha.len() >= 7 {
-            &remote_sha[..7]
-        } else {
-            &remote_sha
+        // 2. Fetch the latest release tag name from GitHub.
+        let remote_version = match self.fetch_remote_release_tag() {
+            Some(v) => v,
+            None => return,
         };
 
-        if local_commit != remote_prefix {
+        // 3. Strip leading 'v' from tag if present (e.g. "v0.1.0" -> "0.1.0")
+        let remote_clean = remote_version.trim_start_matches('v');
+        let local_clean = local_version.trim_start_matches('v');
+
+        if local_clean != remote_clean {
             zed::set_language_server_installation_status(
                 language_server_id,
                 &zed::LanguageServerInstallationStatus::Failed(
                     format!(
-                        "velvet is out of date (local: {local_commit}, remote: {remote_prefix}). \
+                        "velvet is out of date (local: {local_clean}, latest release: {remote_clean}). \
                          Run: cd velvet && git pull && v run build.vsh release, \
                          then copy bin/velvet to your PATH and restart Zed."
                     ),
@@ -162,39 +188,37 @@ impl VEnhancedExtension {
         }
     }
 
-    /// Run `velvet --version` and extract the short commit SHA.
+    /// Run `velvet --version` and extract the version string.
+    /// Handles output like "velvet version 0.1.0" or "velvet 0.1.0".
     /// Returns `None` if the binary cannot be run or the output is not parseable.
-    fn get_local_commit(&self, binary_path: &str) -> Option<String> {
+    fn get_local_version(&self, binary_path: &str) -> Option<String> {
         let output = std::process::Command::new(binary_path)
             .arg("--version")
             .output()
             .ok()?;
 
         let text = String::from_utf8_lossy(&output.stdout).to_string();
-        // Look for "(commit XXXXXXX)" or "commit: XXXXXXX"
         for line in text.lines() {
-            if let Some(sha) = extract_commit_sha(line) {
-                return Some(sha);
+            if let Some(v) = extract_version(line) {
+                return Some(v);
             }
         }
-        // Fallback: also check stderr (some versions write there)
         let text2 = String::from_utf8_lossy(&output.stderr).to_string();
         for line in text2.lines() {
-            if let Some(sha) = extract_commit_sha(line) {
-                return Some(sha);
+            if let Some(v) = extract_version(line) {
+                return Some(v);
             }
         }
         None
     }
 
-    /// GET the GitHub commits API and return the top commit SHA.
+    /// GET the GitHub releases API and return the latest release tag name.
     /// Uses the zed_extension_api HTTP client so the request runs inside the
     /// WASM sandbox with Zed's proxy/trust settings.
-    fn fetch_remote_commit_sha(&self) -> Option<String> {
+    fn fetch_remote_release_tag(&self) -> Option<String> {
         let request = zed::http_client::HttpRequest::builder()
             .method(zed::http_client::HttpMethod::Get)
-            .url(GITHUB_COMMITS_URL)
-            // GitHub API requires a User-Agent header.
+            .url(GITHUB_RELEASES_URL)
             .header("User-Agent", "zed-v-enhanced")
             .header("Accept", "application/vnd.github+json")
             .redirect_policy(zed::http_client::RedirectPolicy::NoFollow)
@@ -202,39 +226,28 @@ impl VEnhancedExtension {
             .ok()?;
 
         let response = zed::http_client::fetch(&request).ok()?;
-
-        // HttpResponse has no status_code field; a successful fetch() means
-        // the request completed — treat an empty body as a signal to abort.
         let body = String::from_utf8(response.body).ok()?;
-        // The response is a JSON object; the SHA is at .sha
         let value: zed::serde_json::Value = zed::serde_json::from_str(&body).ok()?;
-        let sha = value["sha"].as_str()?.to_string();
-        Some(sha)
+        // The releases/latest response has a "tag_name" field, e.g. "v0.1.0"
+        let tag = value["tag_name"].as_str()?.to_string();
+        Some(tag)
     }
 }
 
 // --- Helpers -----------------------------------------------------------------
 
-/// Extract a 7+ character hex commit SHA from a version string line.
+/// Extract a semver-style version string from a line of `velvet --version` output.
 /// Handles patterns like:
-///   "velvet version 0.0.6 (commit abc1234)"
-///   "build commit: abc1234def"
-///   "abc1234"  (bare)
-fn extract_commit_sha(line: &str) -> Option<String> {
-    // Look for the word "commit" followed (possibly after punctuation/space) by
-    // a hex string of at least 7 chars.
-    let lower = line.to_lowercase();
-    if let Some(pos) = lower.find("commit") {
-        let after = &line[pos + "commit".len()..];
-        // Skip non-hex chars to find start of SHA
-        let sha_start = after.find(|c: char| c.is_ascii_hexdigit())?;
-        let hex_part = &after[sha_start..];
-        let sha_end = hex_part
-            .find(|c: char| !c.is_ascii_hexdigit())
-            .unwrap_or(hex_part.len());
-        let sha = &hex_part[..sha_end];
-        if sha.len() >= 7 {
-            return Some(sha[..7].to_string());
+///   "velvet version 0.1.0"
+///   "velvet 0.1.0"
+///   "0.1.0"
+fn extract_version(line: &str) -> Option<String> {
+    // Find the first token that looks like N.N.N (or N.N)
+    for token in line.split_whitespace() {
+        let t = token.trim_start_matches('v');
+        let parts: Vec<&str> = t.split('.').collect();
+        if parts.len() >= 2 && parts.iter().all(|p| p.chars().all(|c| c.is_ascii_digit())) {
+            return Some(t.to_string());
         }
     }
     None

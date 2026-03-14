@@ -47,6 +47,11 @@
 (interface_method_definition
   name: (identifier) @function.method)
 
+; Built-in pseudo-functions — matched before generic call so they take priority
+((call_expression
+  name: (reference_expression) @function.builtin)
+ (#match? @function.builtin "^(println|print|eprintln|eprint|panic|exit|dump|sizeof|typeof|isreftype|__offsetof|assert)$"))
+
 ; Function calls
 (call_expression
   name: (reference_expression) @function.call)
