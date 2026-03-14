@@ -281,6 +281,9 @@ Press `F4` to open the full task list for the current file. Available tasks:
 | `v run <project>` | `v run $ZED_WORKTREE_ROOT` | When a worktree is open |
 | `v build <project>` | `v build $ZED_WORKTREE_ROOT` | When a worktree is open |
 | `v missdoc <project>` | `v missdoc $ZED_WORKTREE_ROOT` | When a worktree is open |
+| `v vet <file>` | `v vet $ZED_FILE` | Any `.v` file |
+| `v vet <project>` | `v vet $ZED_WORKTREE_ROOT` | When a worktree is open |
+| `v doc <project>` | `v doc $ZED_WORKTREE_ROOT` | When a worktree is open |
 
 All tasks run from the directory containing the source file (`$ZED_DIRNAME`) or the project root, as appropriate.
 

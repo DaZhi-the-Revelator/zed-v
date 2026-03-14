@@ -129,6 +129,11 @@
 (global_var_definition
   (identifier) @constant)
 
+; Compile-time constants — @FILE, @LINE, @MOD, @VHASH, @VEXEROOT, etc.
+; These are recognised by a leading @ followed by uppercase letters/underscores.
+((reference_expression) @constant.builtin
+ (#match? @constant.builtin "^@[A-Z_]+$"))
+
 ; Compile-time conditions
 (compile_time_if_expression
   condition: (reference_expression) @constant)
