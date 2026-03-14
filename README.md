@@ -60,11 +60,11 @@ A comprehensive V language extension for [Zed](https://zed.dev/), powered by [ve
 
 ## ⚠️ Important: velvet Required
 
-This extension requires **velvet** as its language server. velvet contains critical fixes and feature additions that are not in the upstream v-analyzer.
+This extension requires **velvet** as its language server. velvet contains critical fixes and feature additions that are not in the upstream v-analyzer binary.
 
 ### Why velvet?
 
-velvet is a fork of v-analyzer with bug fixes and enhancements purpose-built to support this extension. The upstream v-analyzer is missing features and has bugs that prevent this extension from working correctly.
+velvet is a purpose-built language server for V. It is a maintained fork of the upstream v-analyzer, which is missing features and has bugs that prevent this extension from working correctly.
 
 ### Installing velvet
 
@@ -494,7 +494,7 @@ This addresses the silent breakage that can occur when Zed updates and the local
 
 ### ✅ Syntax Highlighting
 
-Powered by `tree_sitter_v` — v-analyzer's own battle-tested grammar — with comprehensive Zed-specific highlight queries covering:
+Powered by `tree_sitter_v` — velvet's battle-tested grammar — with comprehensive Zed-specific highlight queries covering:
 
 - Functions, methods, and function calls (distinguished)
 - Struct, interface, enum, and type declarations
@@ -740,7 +740,7 @@ All velvet features can be individually enabled or disabled via your Zed `settin
 
 See the [Installing velvet](#installing-velvet) section above.
 
-> **Do not use the upstream v-analyzer.** It will crash on enum hover and produce incorrect rename results.
+> **Do not use the upstream v-analyzer binary.** It will crash on enum hover and produce incorrect rename results.
 
 ### V Compiler
 
@@ -766,7 +766,7 @@ If you previously used the **V** extension (the one backed by [VLS — the offic
 
 ### Step 1 — Stop and Remove VLS
 
-VLS is a separate binary that the standard V extension downloads and manages. Remove it before installing V Enhanced so it cannot start and interfere with v-analyzer.
+VLS is a separate binary that the standard V extension downloads and manages. Remove it before installing V Enhanced so it cannot start and interfere with velvet.
 
 **Locate the VLS binary:**
 
@@ -846,7 +846,7 @@ After restarting Zed with V Enhanced active, open a `.v` file and confirm in **V
 2. ~~Go to Extensions (`Ctrl+Shift+X` / `Cmd+Shift+X`)~~
 3. ~~Search for **V Enhanced**~~
 4. ~~Click Install~~
-5. ~~Install the forked v-analyzer (see above)~~
+5. ~~Install velvet (see above)~~
 
 ### Development Installation
 
@@ -866,7 +866,7 @@ After restarting Zed with V Enhanced active, open a `.v` file and confirm in **V
 3. In Zed, open Extensions (`Ctrl+Shift+X`)
 4. Click **Install Dev Extension**
 5. Select this folder
-6. Install the forked v-analyzer (see above)
+6. Install velvet (see above)
 
 ---
 
@@ -915,7 +915,7 @@ v-enhanced/
 ├── build.bat                   # Windows build script
 ├── build.sh                    # Linux / macOS build script
 ├── src/
-│   └── lib.rs                  # Extension entry point — locates and launches v-analyzer
+│   └── lib.rs                  # Extension entry point — locates and launches velvet
 ├── languages/
 │   └── v/
 │       ├── config.toml         # Language settings (brackets, indent, comments, word chars)
@@ -953,11 +953,11 @@ v-enhanced/
 
 ### Server crashes on enum hover
 
-- You are using the upstream v-analyzer — install velvet instead (see above)
+- You are using the upstream v-analyzer binary instead of velvet — install velvet instead (see above)
 
 ### Rename only updates one occurrence
 
-- You are using the upstream v-analyzer — install velvet instead (see above)
+- You are using the upstream v-analyzer binary instead of velvet — install velvet instead (see above)
 
 ### No diagnostics / formatting not working
 
@@ -966,7 +966,7 @@ v-enhanced/
 
 ### Indexing is slow on first open
 
-- v-analyzer indexes your workspace and the V stdlib on first use — this is normal
+- velvet indexes your workspace and the V stdlib on first use — this is normal
 - Progress is shown in the Zed status bar
 - Subsequent opens use the cached index and are fast
 

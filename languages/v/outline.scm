@@ -57,3 +57,16 @@
   body: (block
     "{" @open
     "}" @close)) @item
+
+(function_declaration
+  receiver: (receiver)
+  name: (identifier) @name
+  body: (block
+    "{" @open
+    "}" @close)) @item
+
+(static_method_declaration
+  name: (identifier) @name
+  body: (block
+    "{" @open
+    "}" @close)) @item

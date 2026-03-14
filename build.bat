@@ -16,7 +16,7 @@ echo.
 echo Prerequisites:
 echo   - Rust toolchain (rustup)
 echo   - wasm32-wasip1 target (will be installed if missing)
-echo   - v-analyzer installed and in PATH
+echo   - velvet installed and in PATH
 echo   - Zed fully closed
 echo.
 pause
@@ -40,21 +40,21 @@ echo   WASM target OK
 echo.
 
 :: ==============================================================================
-:: STEP 2: Verify v-analyzer is available
+:: STEP 2: Verify velvet is available
 :: ==============================================================================
-echo [2/5] Checking for v-analyzer...
+echo [2/5] Checking for velvet...
 
-where v-analyzer >nul 2>&1
+where velvet >nul 2>&1
 if %errorlevel% neq 0 (
     echo.
-    echo   WARNING: v-analyzer not found in PATH
-    echo   The extension will still build, but users will need to install v-analyzer.
+    echo   WARNING: velvet not found in PATH
+    echo   The extension will still build, but users will need to install velvet.
     echo.
-    echo   To install v-analyzer:
-    echo     v download -RD https://raw.githubusercontent.com/vlang/v-analyzer/main/install.vsh
+    echo   To install velvet, see this link:
+    echo     https://github.com/DaZhi-the-Revelator/velvet?tab=readme-ov-file#installation
     echo.
 ) else (
-    for /f "tokens=*" %%i in ('where v-analyzer') do echo   Found: %%i
+    for /f "tokens=*" %%i in ('where velvet') do echo   Found: %%i
 )
 echo.
 

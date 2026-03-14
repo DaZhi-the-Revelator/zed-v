@@ -9,10 +9,12 @@
   (struct_field_scope) @fold)
 
 (interface_declaration
-  (interface_method_definition) @fold)
+  "{" @fold.start
+  "}" @fold.end)
 
 (enum_declaration
-  (enum_field_definition) @fold)
+  "{" @fold.start
+  "}" @fold.end)
 
 (if_expression
   (block) @fold)
