@@ -1,6 +1,6 @@
 id = "v-enhanced"
 name = "V Enhanced"
-description = "V language support for Zed — powered by velvet with comprehensive syntax highlighting, intelligent completions, inlay hints, and more"
+description = "V language support for Zed — powered by velvet with comprehensive syntax highlighting, intelligent completions, inlay hints, code lens, and more"
 version = "0.5.3"
 schema_version = 1
 authors = ["Ouyang Dazhi <204389009+DaZhi-the-Revelator@users.noreply.github.com>"]
@@ -27,3 +27,10 @@ enable_range_hints = true
 enable_implicit_err_hints = true
 enable_constant_type_hints = true
 enable_enum_field_value_hints = true
+
+[language_servers.velvet.settings.code_lens]
+enable = true
+enable_run_lens = true
+enable_inheritors_lens = true
+enable_super_interfaces_lens = true
+enable_run_tests_lens = true
