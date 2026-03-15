@@ -49,6 +49,13 @@
     (var_definition
       name: (identifier) @local.definition)))
 
+; Explicit capture for index variable in `for i, v in` loops
+; Guards against scope bleed when field-qualified pattern misses the first sibling
+(range_clause
+  (var_definition_list
+    (var_definition
+      (identifier) @local.definition)))
+
 ; Function parameters
 (parameter_declaration
   name: (identifier) @local.definition)

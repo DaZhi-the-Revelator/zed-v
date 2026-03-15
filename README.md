@@ -2,7 +2,7 @@
 
 A comprehensive V language extension for [Zed](https://zed.dev/), powered by [velvet](https://github.com/DaZhi-the-Revelator/velvet) with bug fixes, enhanced hover documentation, and correct symbol renaming.
 
-**Supports V 0.5.3.**
+**Supports V 0.5.1.**
 
 ---
 
@@ -107,7 +107,7 @@ v run build.vsh release
 
 ---
 
-## V 0.5.3 — Breaking Change Notice
+## V 0.5.1 — Breaking Change Notice
 
 > **`x.ttf` rendering module has moved.**
 >
@@ -500,7 +500,7 @@ This addresses the silent breakage that can occur when Zed updates and the local
 
 Powered by `tree_sitter_v` — velvet's battle-tested grammar — with comprehensive Zed-specific highlight queries covering:
 
-- Functions, methods, and function calls (distinguished)
+- Functions, methods (including static methods declared as `fn Foo.bar()`), and function calls (distinguished)
 - Struct, interface, enum, and type declarations
 - All keyword categories: storage modifiers (`mut`, `pub`, `const`, `static`), control flow (`if`, `for`, `match`, `return`), type definitions (`struct`, `interface`, `enum`, `type`)
 - String literals: interpreted, raw, C strings, string interpolation
@@ -520,7 +520,7 @@ Powered by `tree_sitter_v` — velvet's battle-tested grammar — with comprehen
 - Comments: line (`//`) and block (`/* */`)
 - Shebang (`#!/usr/bin/env v`)
 
-**Variable scoping** via `locals.scm` prevents local variable names from bleeding across function boundaries in syntax-only highlighting mode (files over 1000 lines). Scopes are defined for function bodies, blocks, `if`/`else`, `for`, `match`, `lock`, `unsafe`, and `defer`. Parameter declarations, receiver names, loop variables, and short variable declarations are all tracked as definitions.
+**Variable scoping** via `locals.scm` prevents local variable names from bleeding across function boundaries in syntax-only highlighting mode (files over 1000 lines). Scopes are defined for function bodies, blocks, `if`/`else`, `for`, `match`, `lock`, `unsafe`, and `defer`. Parameter declarations, receiver names, loop variables (including both the index and value in `for i, v in` style loops), and short variable declarations are all tracked as definitions.
 
 **Embedded language injection** via `injections.scm` gives sub-languages their own highlighting inside V source:
 
@@ -723,13 +723,6 @@ All velvet features can be individually enabled or disabled via your Zed `settin
         "enable_enum_field_value_hints": true
       },
       "enable_semantic_tokens": "full",
-      "code_lens": {
-        "enable": true,
-        "enable_run_lens": true,
-        "enable_inheritors_lens": true,
-        "enable_super_interfaces_lens": true,
-        "enable_run_tests_lens": true
-      }
     }
   }
 }

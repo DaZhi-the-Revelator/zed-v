@@ -43,6 +43,10 @@
   receiver: (receiver)
   name: (identifier) @function.method)
 
+; Static method declarations (Foo.bar() syntax)
+(static_method_declaration
+  name: (identifier) @function.method)
+
 ; Interface method declarations
 (interface_method_definition
   name: (identifier) @function.method)
