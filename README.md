@@ -140,6 +140,7 @@ All LSP intelligence is provided by velvet. This extension wires every capabilit
   - `unused` variables and imports tagged with strikethrough (`DiagnosticTag.unnecessary`)
   - `deprecated` symbols tagged with strikethrough (`DiagnosticTag.deprecated`)
   - All errors, warnings, and notices from the actual V compiler — not heuristics
+  - **Unused parameter warning** (velvet-native) — flags parameters never referenced in the function body; parameters prefixed with `_` and `test_*` functions are excluded; toggleable (see [Feature Toggles](#-feature-toggles))
 
 - **Type Checking** — Full PSI-based type inference:
   - Variable type inference across assignments
@@ -258,6 +259,8 @@ All LSP intelligence is provided by velvet. This extension wires every capabilit
   - **Add `[flag]` Attribute** — adds `[flag]` to an enum definition
   - **Import Module** — detects an `undefined ident` compiler error and automatically inserts the correct `import` statement
   - **Remove Unused Import** — automatically removes import statements that the V compiler reports as unused
+  - **Extract Variable** — replaces a compound expression with a fresh `name := expr` declaration inserted on the line above; the variable name is inferred from the expression where possible
+  - **Convert `if`/`else` to `match`** — converts an `if` / `else if` chain whose every branch compares the same subject with `==` into an idiomatic V `match` block; a trailing `else` is preserved as the `match else` arm
 
 ---
 
@@ -707,7 +710,7 @@ Double-click selects complete V identifiers including underscores — `snake_cas
 
 ### ✅ Feature Toggles
 
-All velvet features can be individually enabled or disabled via your Zed `settings.json`. Changes take effect after a full Zed restart. The below settings are the **default**. You do not need to input these unless you want to change them from shown.
+All velvet features can be individually enabled or disabled via your Zed `settings.json`. Changes take effect after a full Zed restart. The settings below show the **defaults** — you only need to include a key if you want to change it.
 
 ```json
 "lsp": {
@@ -723,6 +726,9 @@ All velvet features can be individually enabled or disabled via your Zed `settin
         "enable_enum_field_value_hints": true
       },
       "enable_semantic_tokens": "full",
+      "inspections": {
+        "enable_unused_parameter_warning": true
+      }
     }
   }
 }
@@ -735,6 +741,14 @@ All velvet features can be individually enabled or disabled via your Zed `settin
 | `"full"` | Two-pass: accurate semantic + syntax highlighting (default) |
 | `"syntax"` | Syntax-only pass — faster, recommended for very large files |
 | `"none"` | Semantic tokens disabled entirely |
+
+**`inspections` keys:**
+
+| Key | Default | Description |
+|-----|---------|-------------|
+| `enable_unused_parameter_warning` | `true` | Warn when a parameter is declared but never used in the function body. Parameters prefixed with `_` and all parameters in `test_*` functions are excluded. |
+
+Also configurable in `config.toml` under `[inspections]` — see the [velvet configuration docs](https://github.com/DaZhi-the-Revelator/velvet#configuration). Settings supplied via `initialization_options` take precedence over the TOML file.
 
 ---
 
