@@ -2,7 +2,7 @@
   "argv": ["v-kernel", "{connection_file}"],
   "display_name": "V",
   "language": "V",
-  "interrupt_mode": "signal",
+  "interrupt_mode": "message",
   "metadata": {
     "debugger": false
   }

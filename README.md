@@ -2,7 +2,7 @@
 
 A comprehensive V language extension for [Zed](https://zed.dev/), powered by [velvet](https://github.com/DaZhi-the-Revelator/velvet) with bug fixes, enhanced hover documentation, and correct symbol renaming.
 
-**Supports V 0.5.1.**
+**Supports V 0.5.1. Extension version 0.6.2.**
 
 ---
 
@@ -91,7 +91,7 @@ Copy-Item .\bin\velvet.exe "$env:USERPROFILE\.config\velvet\bin\velvet.exe"
 
 ```sh
 velvet --version
-# Should print: velvet version 0.0.6
+# Should print: velvet version 0.2.3
 ```
 
 ### Staying Up to Date
@@ -107,26 +107,7 @@ v run build.vsh release
 
 ---
 
-## V 0.5.1 — Breaking Change Notice
-
-> **`x.ttf` rendering module has moved.**
->
-> In V 0.5.1, `vlib/x/ttf/render_sokol_cpu.v` was extracted into a separate module. If your
-> project imports `x.ttf` for rendering functions, update your import:
->
-> ```v
-> // Before (V < 0.5.1)
-> import x.ttf
->
-> // After (V 0.5.1+)
-> import x.ttf.render_sokol
-> ```
->
-> The base `x.ttf` module remains available for non-rendering TTF utilities. Only the sokol
-> CPU-rendering surface has moved to `x.ttf.render_sokol`. After updating V to 0.5.1, re-run
-> `velvet` against your project to refresh the stub index.
-
----
+> **Migrating from V < 0.5.1?** `vlib/x/ttf/render_sokol_cpu.v` was extracted into a separate module in 0.5.1. Change `import x.ttf` to `import x.ttf.render_sokol` for rendering functions, then re-run `velvet` to refresh the stub index.
 
 ## Features
 
@@ -230,13 +211,14 @@ All LSP intelligence is provided by velvet. This extension wires every capabilit
   - Enums (with their values nested inside, showing implicit values)
   - Constants (with type and value)
   - Type aliases
-- **Inlay Hints** — 6 types of inline annotations:
+- **Inlay Hints** — 7 types of inline annotations:
   - **Type hints** — inferred type shown after `:=` assignments: `x: int := 10`
   - **Parameter name hints** — parameter names shown before arguments in function calls
   - **Range operator hints** — `≤` and `<` shown on `..` range operators to clarify inclusivity
   - **Implicit `err →` hints** — shown inside `or { }` blocks and `else` branches of result unwrapping
   - **Enum field value hints** — implicit enum field values shown inline next to each field
   - **Constant type hints** — type shown after constant declarations
+  - **Anonymous function return type hints** — inferred return type shown on the closing `}` of anonymous functions with no explicit return type
 - **Semantic Tokens** — Enhanced syntax highlighting from the LSP layer:
   - Two-pass system for accuracy and performance:
     - Fast syntax-based pass for files over 1000 lines
@@ -298,186 +280,27 @@ Functions named `test_*` get their own gutter arrow and appear individually in t
 
 ### ✅ Jupyter Kernel & REPL Integration
 
-V Enhanced ships a complete Jupyter kernel (`v-kernel`) that integrates with Zed's built-in REPL.
+V Enhanced ships a complete Jupyter kernel (`v-kernel`) that integrates with Zed's built-in REPL. The kernel is a separate Rust project in the `kernel/` subdirectory with its own full documentation.
 
-#### Installing the Kernel
+**[→ Full kernel documentation and installation instructions](kernel/README.md)**
 
-The kernel is in the `kernel/` subdirectory of this extension. It is a separate Rust project that must be built and installed independently.
+Quick summary:
 
-**Requirements:**
+- Cells are delimited with `// %%` comment separators
+- Top-level declarations (`fn`, `struct`, `enum`, `const`, `import`, etc.) accumulate across cells; bare statements run in an isolated `fn main()` per cell
+- `dump()` output is rendered as a styled HTML table (columns: location · name · type · value)
+- Press `Ctrl+Shift+Enter` (Windows/Linux) or `Cmd+Shift+Enter` (macOS) to execute the current cell
+- If the kernel doesn't appear in Zed's picker, run **"REPL: Refresh Kernelspecs"** from the command palette (`Ctrl+Shift+P`)
 
-- Rust (install from [rustup.rs](https://rustup.rs/))
-- V compiler on your `PATH`
-- Jupyter installed (`pip install jupyter` or via conda)
-- On Linux/macOS: system ZeroMQ library
-
-```bash
-# macOS
-brew install zeromq
-
-# Ubuntu / Debian
-sudo apt install libzmq3-dev
-
-# Fedora / RHEL
-sudo dnf install zeromq-devel
-```
-
-On Windows, ZeroMQ is bundled — no extra steps needed.
-
-#### Windows — Additional Requirements
-
-On Windows, the kernel build requires both **Microsoft Visual Studio Build Tools** and **Rust** before running `install.bat`.
-
-##### Step 1 — Install Visual Studio Build Tools
-
-Download the installer from the [Visual Studio downloads page](https://visualstudio.microsoft.com/downloads/) (scroll to *Tools for Visual Studio* → **Build Tools for Visual Studio**). Run the installer and, on the *Workloads* tab, select:
-
-- ✅ **Desktop development with C++**
-
-This installs the MSVC compiler, Windows SDK, and the C/C++ linker that Rust uses on Windows. The full download is roughly 4–6 GB.
-
-> **Alternative — winget:**
->
-> ```bat
-> winget install Microsoft.VisualStudio.2022.BuildTools --override "--quiet --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended"
-> ```
-
-##### Step 2 — Install Rust
-
-Download and run `rustup-init.exe` from [rustup.rs](https://rustup.rs/). Accept the defaults. When prompted to select an installation type, choose **1) Proceed with standard installation**.
-
-After the installer finishes, open a **new** Command Prompt or PowerShell window so that `cargo` and `rustc` are on your `PATH`.
-
-Verify:
-
-```bat
-rustc --version
-cargo --version
-```
-
-> **If you installed Build Tools *after* Rust:** rustup links the MSVC toolchain automatically, but only if Build Tools were present at install time. If you see a linker error like `link.exe not found`, run:
->
-> ```bat
-> rustup toolchain install stable-x86_64-pc-windows-msvc
-> rustup default stable-x86_64-pc-windows-msvc
-> ```
-
-Once both prerequisites are in place, proceed with the **Build and install** steps below.
-
-**Build and install:**
-
-```bat
-:: Windows
-cd kernel
-install.bat
-```
-
-```bash
-# Linux / macOS
-cd kernel
-chmod +x install.sh
-./install.sh
-```
-
-The install scripts build the kernel with `cargo build --release`, copy the binary to `~/.cargo/bin/`, and register the Jupyter kernelspec automatically.
-
-**Verify:**
-
-```sh
-jupyter kernelspec list
-# Should show:
-#   v    /path/to/jupyter/kernels/v
-```
-
-#### Using the REPL in Zed
-
-1. Open any `.v` file
-2. Optionally divide it into cells using `// %%` comment separators
-3. Place your cursor anywhere in the cell you want to run
-4. Press `Ctrl+Shift+Enter` (Windows/Linux) or `Cmd+Shift+Enter` (macOS) to execute the cell
-
-With no `// %%` separators the entire file is treated as a single cell. With separators, only the cell containing your cursor is sent to the kernel.
-
-If the V kernel doesn't appear in Zed's kernel picker, run **"REPL: Refresh Kernelspecs"** from the command palette (`Ctrl+Shift+P`).
-
-#### How It Works
-
-`v-kernel` implements the [Jupyter messaging protocol v5.3](https://jupyter-client.readthedocs.io/en/stable/messaging.html) over ZeroMQ.
-
-**Stateful execution across cells:** top-level declarations (`fn`, `struct`, `enum`, `const`, `import`, `type`, `interface`) accumulate across cells for the duration of the session — later cells can reference structs and functions defined in earlier cells. Bare statements and expressions are wrapped in `fn main()` for the **current cell only** and are not accumulated, so re-running or editing a cell never causes "already defined" / redeclaration errors from stale earlier runs.
-
-```v
-import math
-
-// %%
-
-// Cell 1 — declarations accumulate across cells
-struct Point {
-    x f64
-    y f64
-}
-
-fn distance(a Point, b Point) f64 {
-    return math.sqrt((b.x - a.x) * (b.x - a.x) + (b.y - a.y) * (b.y - a.y))
-}
-
-// %%
-
-// Cell 2 — statements run inside fn main() automatically
-p1 := Point{0, 0}
-p2 := Point{3, 4}
-println(distance(p1, p2))  // → 5.0
-
-// %%
-
-// Cell 3 — prior declarations are still in scope
-p3 := Point{6, 8}
-println(distance(p1, p3))  // → 10.0
-```
-
-#### Kernel Architecture
-
-| Component | Purpose |
-|-----------|---------|
-| ZeroMQ sockets | Jupyter wire transport (shell, iopub, stdin, control, heartbeat) |
-| HMAC-SHA256 | Message signing per the Jupyter protocol |
-| Session state | Accumulated declarations tracked across cell executions |
-| V compiler | Each cell invokes `v run` on the assembled program |
-
-#### Kernel Limitations
-
-- **No autocomplete in notebooks** — completion comes from velvet via LSP, not the kernel; works in `.v` files, not in `.ipynb` notebooks
-- **Recompilation on every cell** — the full accumulated program is recompiled each time; V is fast, but long sessions accumulate more code to compile
-- **Interrupt support** — `Ctrl+C` sends `interrupt_request`; the kernel forwards SIGINT (Unix) or `TerminateProcess` (Windows) to the running `v run` child process and returns the kernel to idle
-- **No arbitrary rich display** — only `dump()` output is rendered as HTML; for general rich output, V has no equivalent of IPython's `display()` machinery
-- **dump() table is render-only** — Zed's "copy output" and "open in buffer" actions work on plain stream output only; `display_data` messages (which is what the HTML table uses) are not supported by those actions in Zed's REPL frontend. This is a Zed limitation, not a kernel limitation. A `text/plain` fallback is included in the message for non-HTML frontends.
+See [kernel/README.md](kernel/README.md) for full details on how it works, architecture, and limitations.
 
 ---
 
 ### ✅ Rich dump() Output in REPL
 
-`dump()` calls are automatically intercepted by the kernel and rendered as a styled HTML table in the Zed REPL output panel.
+`dump()` calls are automatically intercepted and rendered as a styled HTML table in the Zed REPL output panel — columns: **location · name · type · value**, styled to match Catppuccin Mocha. All other output (`println`, `print`, `eprintln`) appears as plain stream text.
 
-V's `dump()` already returns structured information on each call:
-
-```log
-[main.v:8] x = int(42)
-```
-
-The kernel parses this output format and emits a `display_data` Jupyter message with `text/html` MIME data. The result is a colour-coded table with columns **location · name · type · value**, styled to match Catppuccin Mocha. A `text/plain` fallback is included for non-HTML frontends.
-
-All other output (`println`, `print`, `eprintln`, etc.) continues to appear as plain stream text — only `dump()` lines are intercepted.
-
-```v
-// Cell — mix of dump() and plain output
-x := 42
-name := 'world'
-println('hello')  // → plain stream text: "hello"
-dump(x)           // → HTML table row: main.v:4 | x | int | 42
-dump(name)        // → HTML table row: main.v:5 | name | string | world
-```
-
-No changes to your V code are needed — `dump()` works exactly as before; the kernel makes it look better in the REPL.
+No changes to your V code are needed. See [kernel/README.md](kernel/README.md) for full details.
 
 ---
 
@@ -491,7 +314,7 @@ Every time the extension activates (i.e. when you open a `.v` file and the langu
 
 If they differ, a notice appears in the Zed language-server status bar:
 
-> velvet is out of date (local: `0.0.6`, latest release: `0.1.0`). Run: `cd velvet && git pull && v run build.vsh release`, then copy `bin/velvet` to your PATH and restart Zed.
+> velvet is out of date (local: `0.2.2`, latest release: `0.2.3`). Run: `cd velvet && git pull && v run build.vsh release`, then copy `bin/velvet` to your PATH and restart Zed.
 
 If the versions already match, or if the check fails for any reason (no network, API rate limit, etc.), nothing is shown. The check runs at most once per session and never blocks the language server from starting.
 
@@ -511,7 +334,7 @@ Powered by `tree_sitter_v` — velvet's battle-tested grammar — with comprehen
 - Rune literals
 - Integer and float literals
 - Boolean literals (`true`, `false`)
-- Builtin constants (`nil`, `none`)
+- Built-in constants (`nil`, `none`)
 - Attributes (`@[...]`)
 - Modules and import paths
 - Struct fields and selector expressions
@@ -723,7 +546,8 @@ All velvet features can be individually enabled or disabled via your Zed `settin
         "enable_range_hints": true,
         "enable_implicit_err_hints": true,
         "enable_constant_type_hints": true,
-        "enable_enum_field_value_hints": true
+        "enable_enum_field_value_hints": true,
+        "enable_anon_fn_return_type_hints": true
       },
       "enable_semantic_tokens": "full",
       "inspections": {
@@ -741,6 +565,19 @@ All velvet features can be individually enabled or disabled via your Zed `settin
 | `"full"` | Two-pass: accurate semantic + syntax highlighting (default) |
 | `"syntax"` | Syntax-only pass — faster, recommended for very large files |
 | `"none"` | Semantic tokens disabled entirely |
+
+**`inlay_hints` keys:**
+
+| Key | Default | Description |
+|-----|---------|-------------|
+| `enable` | `true` | Master switch — disabling this turns off all inlay hints |
+| `enable_type_hints` | `true` | Inferred type after `:=` assignments |
+| `enable_parameter_name_hints` | `true` | Parameter names before arguments in function calls |
+| `enable_range_hints` | `true` | `≤` / `<` on `..` range operators |
+| `enable_implicit_err_hints` | `true` | `err →` inside `or { }` and result `else` branches |
+| `enable_constant_type_hints` | `true` | Type shown after constant declarations |
+| `enable_enum_field_value_hints` | `true` | Implicit numeric values shown next to enum fields |
+| `enable_anon_fn_return_type_hints` | `true` | Inferred return type on closing `}` of anonymous functions |
 
 **`inspections` keys:**
 
@@ -762,7 +599,7 @@ See the [Installing velvet](#installing-velvet) section above.
 
 ### V Compiler
 
-velvet uses the V compiler for diagnostics and formatting. This extension targets **V 0.5.3**. Install V from [vlang.io](https://vlang.io/).
+velvet uses the V compiler for diagnostics and formatting. This extension targets **V 0.5.1**. Install V from [vlang.io](https://vlang.io/).
 
 If velvet cannot find your V installation automatically, create a project-local config:
 
@@ -774,7 +611,7 @@ Then set `custom_vroot` in the generated `.velvet/config.toml`.
 
 ### Jupyter Kernel (Optional)
 
-Required only if you want REPL/notebook support. See [Jupyter Kernel & REPL Integration](#-jupyter-kernel--repl-integration) above.
+Required only if you want REPL/notebook support. See [kernel/README.md](kernel/README.md) for full build and install instructions.
 
 ---
 
@@ -918,6 +755,7 @@ enable_range_hints = true
 enable_implicit_err_hints = true
 enable_constant_type_hints = true
 enable_enum_field_value_hints = true
+enable_anon_fn_return_type_hints = true
 ```
 
 A global config also exists at `~/.config/velvet/config.toml` and applies to all projects.

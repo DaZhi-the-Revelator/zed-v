@@ -3,6 +3,8 @@
 A Jupyter kernel for the [V programming language](https://vlang.io/), written in Rust.  
 Integrates with [Zed's REPL](https://zed.dev/docs/repl) — press `Ctrl+Shift+Enter` (or `Cmd+Shift+Enter` on macOS) on any `.v` file to evaluate a cell.
 
+Part of the **V Enhanced** suite: [v-enhanced](https://github.com/DaZhi-the-Revelator/zed-v-enhanced) · [velvet](https://github.com/DaZhi-the-Revelator/velvet) · [tree-sitter-v](https://github.com/DaZhi-the-Revelator/tree-sitter-v)
+
 ---
 
 ## How it works
@@ -13,7 +15,11 @@ Zed detects it automatically once the kernelspec is installed — no configurati
 **Stateful execution across cells:** top-level declarations (`fn`, `struct`, `enum`, `const`, `import`, `type`, `interface`) accumulate across cells in a session — later cells can reference structs and functions defined earlier. Bare statements and expressions are wrapped in `fn main()` for the **current cell only** and are not accumulated, so re-running or editing a cell never causes redeclaration errors.
 
 ```v
-// Cell 1 — declares a struct (accumulated)
+import math
+
+// %%
+
+// Cell 1 — declarations accumulate across cells
 struct Point {
     x f64
     y f64
@@ -22,6 +28,8 @@ struct Point {
 fn distance(a Point, b Point) f64 {
     return math.sqrt((b.x - a.x) * (b.x - a.x) + (b.y - a.y) * (b.y - a.y))
 }
+
+// %%
 
 // Cell 2 — statements (wrapped in fn main automatically)
 p1 := Point{0, 0}
@@ -68,9 +76,11 @@ Non-`dump()` output (regular `println`, etc.) continues to appear as plain strea
 - [Jupyter](https://jupyter.org/) installed (`pip install jupyter` or via conda)
 - [Zed](https://zed.dev/) with the **v-enhanced** extension installed
 
-### System ZeroMQ (Linux / macOS only)
+### System ZeroMQ
 
-The `zmq` crate links against `libzmq`. Install it before building:
+The `zmq` crate links against the system `libzmq` on all platforms.
+
+**Linux / macOS** — install before building:
 
 ```bash
 # macOS
@@ -83,11 +93,39 @@ sudo apt install libzmq3-dev
 sudo dnf install zeromq-devel
 ```
 
-On Windows, the `zmq` crate bundles a pre-built `libzmq` — no extra steps needed.
+**Windows** — install [vcpkg](https://github.com/microsoft/vcpkg) and then run:
+
+```bat
+vcpkg install zeromq:x64-windows
+vcpkg integrate install
+```
+
+The `zmq` crate does **not** bundle `libzmq`. You also need **Microsoft Visual Studio Build Tools** with the **Desktop development with C++** workload installed before running `install.bat` — see below.
 
 ---
 
 ## Build & Install
+
+### Windows — Prerequisites
+
+Before running `install.bat` you need:
+
+1. **Visual Studio Build Tools** with the **Desktop development with C++** workload. Download from the [Visual Studio downloads page](https://visualstudio.microsoft.com/downloads/) (scroll to *Tools for Visual Studio* → **Build Tools for Visual Studio**), or via winget:
+
+   ```bat
+   winget install Microsoft.VisualStudio.2022.BuildTools --override "--quiet --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended"
+   ```
+
+2. **Rust** — download `rustup-init.exe` from [rustup.rs](https://rustup.rs/) and proceed with the standard installation. Open a new terminal after installing so `cargo` and `rustc` are on your `PATH`.
+
+   > If you installed Build Tools *after* Rust and see `link.exe not found`, run:
+>
+   > ```bat
+   > rustup toolchain install stable-x86_64-pc-windows-msvc
+   > rustup default stable-x86_64-pc-windows-msvc
+   > ```
+
+1. **libzmq via vcpkg** — see [System ZeroMQ](#system-zeromq) above.
 
 ### Windows
 
@@ -180,6 +218,6 @@ v-kernel/
 
 - **No autocomplete / introspection** — the kernel runs code but does not expose completion or inspection endpoints (those come from velvet via the LSP, which works independently)
 - **Re-execution overhead** — the full accumulated program is recompiled on every cell execution; V is fast, but deep sessions will accumulate latency
-- **Interrupt support** — `Ctrl+C` sends `interrupt_request`; the kernel forwards SIGINT (Unix) or `TerminateProcess` (Windows) to the running `v run` child process and returns the kernel to idle
+- **Interrupt support** — `Ctrl+C` sends an `interrupt_request` message; the kernel forwards SIGINT (Unix) or `TerminateProcess` (Windows) to the running `v run` child process and returns the kernel to idle. `kernel.json` uses `interrupt_mode: "message"`, which works on all platforms
 - **dump() table is render-only** — Zed's "copy output" and "open in buffer" actions apply to plain stream messages only; the HTML table uses `display_data` which Zed does not currently expose those actions for. A `text/plain` fallback is included for non-HTML frontends. This is a Zed frontend limitation.
 - **No arbitrary rich display** — only `dump()` is rendered as HTML; V has no equivalent of IPython's `display()` machinery
