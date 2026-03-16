@@ -29,6 +29,3 @@ enable_constant_type_hints = true
 enable_enum_field_value_hints = true
 enable_anon_fn_return_type_hints = true
 
-[language_servers.velvet.settings.inspections]
-enable_unused_parameter_warning = true
-

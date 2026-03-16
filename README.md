@@ -120,7 +120,7 @@ All LSP intelligence is provided by velvet. This extension wires every capabilit
   - `unused` variables and imports tagged with strikethrough (`DiagnosticTag.unnecessary`)
   - `deprecated` symbols tagged with strikethrough (`DiagnosticTag.deprecated`)
   - All errors, warnings, and notices from the actual V compiler — not heuristics
-  - **Unused parameter warning** (velvet-native) — flags parameters never referenced in the function body; parameters prefixed with `_` and `test_*` functions are excluded; toggleable (see [Feature Toggles](#-feature-toggles))
+  - **Unused parameter warning** (velvet-native) — flags parameters never referenced in the function body; parameters prefixed with `_` and `test_*` functions are excluded; **disabled by default**, toggleable (see [Feature Toggles](#-feature-toggles))
 
 - **Type Checking** — Full PSI-based type inference:
   - Variable type inference across assignments
@@ -557,7 +557,7 @@ All velvet features can be individually enabled or disabled via your Zed `settin
         "enable_run_tests_lens": true
       },
       "inspections": {
-        "enable_unused_parameter_warning": true
+        "enable_unused_parameter_warning": false
       }
     }
   }
@@ -591,7 +591,7 @@ All velvet features can be individually enabled or disabled via your Zed `settin
 
 | Key | Default | Description |
 |-----|---------|-------------|
-| `enable_unused_parameter_warning` | `true` | Warn when a parameter is declared but never used in the function body. Parameters prefixed with `_` and all parameters in `test_*` functions are excluded. |
+| `enable_unused_parameter_warning` | `false` | Warn when a parameter is declared but never used in the function body. Parameters prefixed with `_` and all parameters in `test_*` functions are excluded. Disabled by default — set to `true` to enable. |
 
 Also configurable in `config.toml` under `[inspections]` — see the [velvet configuration docs](https://github.com/DaZhi-the-Revelator/velvet#configuration). Settings supplied via `initialization_options` take precedence over the TOML file.
 
@@ -766,7 +766,8 @@ enable_enum_field_value_hints = true
 enable_anon_fn_return_type_hints = true
 
 [inspections]
-enable_unused_parameter_warning = true
+# Disabled by default. Set to true to enable.
+enable_unused_parameter_warning = false
 ```
 
 A global config also exists at `~/.config/velvet/config.toml` and applies to all projects.
