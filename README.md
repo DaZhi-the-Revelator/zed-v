@@ -2,7 +2,7 @@
 
 A comprehensive V language extension for [Zed](https://zed.dev/), powered by [velvet](https://github.com/DaZhi-the-Revelator/velvet) with bug fixes, enhanced hover documentation, and correct symbol renaming.
 
-**Supports V 0.5.1. Extension version 0.6.2.**
+**Supports V 0.5.1. Extension version 0.6.3.**
 
 ---
 
@@ -40,7 +40,6 @@ A comprehensive V language extension for [Zed](https://zed.dev/), powered by [ve
   - [Development Installation](#development-installation)
 - [Configuration](#configuration)
   - [Per-Project velvet Config](#per-project-velvet-config)
-- [Project Structure](#project-structure)
 - [Troubleshooting](#troubleshooting)
   - [velvet not found](#velvet-not-found)
   - [Server crashes on enum hover](#server-crashes-on-enum-hover)
@@ -91,7 +90,7 @@ Copy-Item .\bin\velvet.exe "$env:USERPROFILE\.config\velvet\bin\velvet.exe"
 
 ```sh
 velvet --version
-# Should print: velvet version 0.2.3
+# Should print: velvet version 0.2.4
 ```
 
 ### Staying Up to Date
@@ -314,7 +313,7 @@ Every time the extension activates (i.e. when you open a `.v` file and the langu
 
 If they differ, a notice appears in the Zed language-server status bar:
 
-> velvet is out of date (local: `0.2.2`, latest release: `0.2.3`). Run: `cd velvet && git pull && v run build.vsh release`, then copy `bin/velvet` to your PATH and restart Zed.
+> velvet is out of date (local: `0.2.3`, latest release: `0.2.4`). Run: `cd velvet && git pull && v run build.vsh release`, then copy `bin/velvet` to your PATH and restart Zed.
 
 If the versions already match, or if the check fails for any reason (no network, API rate limit, etc.), nothing is shown. The check runs at most once per session and never blocks the language server from starting.
 
@@ -550,6 +549,13 @@ All velvet features can be individually enabled or disabled via your Zed `settin
         "enable_anon_fn_return_type_hints": true
       },
       "enable_semantic_tokens": "full",
+      "code_lens": {
+        "enable": true,
+        "enable_run_lens": true,
+        "enable_inheritors_lens": true,
+        "enable_super_interfaces_lens": true,
+        "enable_run_tests_lens": true
+      },
       "inspections": {
         "enable_unused_parameter_warning": true
       }
@@ -557,6 +563,8 @@ All velvet features can be individually enabled or disabled via your Zed `settin
   }
 }
 ```
+
+> **Note:** You only need to include the keys you want to change. User-supplied values are deep-merged on top of the extension defaults, so setting a single nested key (e.g. `inspections.enable_unused_parameter_warning`) does not affect any other settings.
 
 **`enable_semantic_tokens` values:**
 
@@ -756,46 +764,12 @@ enable_implicit_err_hints = true
 enable_constant_type_hints = true
 enable_enum_field_value_hints = true
 enable_anon_fn_return_type_hints = true
+
+[inspections]
+enable_unused_parameter_warning = true
 ```
 
 A global config also exists at `~/.config/velvet/config.toml` and applies to all projects.
-
----
-
-## Project Structure
-
-```txt
-v-enhanced/
-├── extension.toml              # Extension metadata, grammar reference, default settings
-├── Cargo.toml                  # Rust extension dependency (zed_extension_api)
-├── build.bat                   # Windows build script
-├── build.sh                    # Linux / macOS build script
-├── src/
-│   └── lib.rs                  # Extension entry point — locates and launches velvet
-├── languages/
-│   └── v/
-│       ├── config.toml         # Language settings (brackets, indent, comments, word chars)
-│       ├── highlights.scm      # Comprehensive syntax highlighting queries
-│       ├── brackets.scm        # Rainbow bracket pairs ({ } [ ] ( ))
-│       ├── folds.scm           # Code folding queries
-│       ├── injections.scm      # Embedded language injections (V interp, SQL, ASM)
-│       ├── locals.scm          # Variable scope definitions for syntax-only highlighting
-│       ├── outline.scm         # Breadcrumb / outline panel queries
-│       ├── tags.scm            # Symbol search queries (Ctrl+T)
-│       └── snippets.json       # 50 code snippets
-├── languages/
-│   └── vmod/
-│       ├── config.toml         # VModManifest language settings
-│       └── highlights.scm      # v.mod syntax highlighting (reuses V grammar)
-└── kernel/                     # Jupyter kernel (separate Rust project)
-    ├── src/
-    │   └── main.rs             # Full kernel implementation
-    ├── kernelspec/
-    │   └── kernel.json         # Jupyter kernelspec descriptor
-    ├── Cargo.toml              # Kernel Rust dependencies
-    ├── install.bat             # Windows build + install script
-    └── install.sh              # Linux / macOS build + install script
-```
 
 ---
 
@@ -867,6 +841,8 @@ If `rustup target add wasm32-wasip1` reports *"component 'Rust-std' for target '
 
 ### Settings don't seem to apply
 
+- Settings must be placed under `lsp.velvet.initialization_options` in your Zed `settings.json` — **not** at the top level of `settings.json`
+- For example, to disable the unused parameter warning: `"lsp": { "velvet": { "initialization_options": { "inspections": { "enable_unused_parameter_warning": false } } } }`
 - Settings changes require a **full Zed restart** — not just closing and reopening a file
 
 ### Checking logs

@@ -1,7 +1,7 @@
 id = "v-enhanced"
 name = "V Enhanced"
 description = "V language support for Zed — powered by velvet with comprehensive syntax highlighting, intelligent completions, inlay hints, code lens, and more"
-version = "0.6.2"
+version = "0.6.3"
 schema_version = 1
 authors = ["Ouyang Dazhi <204389009+DaZhi-the-Revelator@users.noreply.github.com>"]
 repository = "https://github.com/DaZhi-the-Revelator/zed-v-enhanced"

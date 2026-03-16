@@ -54,9 +54,10 @@ impl zed::Extension for VEnhancedExtension {
     fn language_server_initialization_options(
         &mut self,
         _language_server_id: &LanguageServerId,
-        _worktree: &zed::Worktree,
+        worktree: &zed::Worktree,
     ) -> Result<Option<zed::serde_json::Value>> {
-        Ok(Some(zed::serde_json::json!({
+        // Start with the built-in defaults.
+        let mut options = zed::serde_json::json!({
             "inlay_hints": {
                 "enable": true,
                 "enable_type_hints": true,
@@ -74,8 +75,23 @@ impl zed::Extension for VEnhancedExtension {
                 "enable_inheritors_lens": true,
                 "enable_super_interfaces_lens": true,
                 "enable_run_tests_lens": true
+            },
+            "inspections": {
+                "enable_unused_parameter_warning": true
             }
-        })))
+        });
+
+        // Merge any user-supplied initialization_options from settings.json on
+        // top of the defaults.  This lets users override individual keys (e.g.
+        // "inspections.enable_unused_parameter_warning") without having to
+        // repeat the whole block.
+        if let Ok(lsp_settings) = zed::settings::LspSettings::for_worktree("velvet", worktree) {
+            if let Some(user_options) = lsp_settings.initialization_options {
+                merge_json(&mut options, user_options);
+            }
+        }
+
+        Ok(Some(options))
     }
 }
 
@@ -236,6 +252,22 @@ impl VEnhancedExtension {
 }
 
 // --- Helpers -----------------------------------------------------------------
+
+/// Recursively merge `src` into `dst`.  Object keys in `src` overwrite keys in
+/// `dst`; for nested objects the merge is recursive so individual sub-keys can
+/// be overridden without replacing the whole object.
+fn merge_json(dst: &mut zed::serde_json::Value, src: zed::serde_json::Value) {
+    if let (Some(dst_obj), Some(src_obj)) = (dst.as_object_mut(), src.as_object()) {
+        for (key, src_val) in src_obj {
+            let dst_entry = dst_obj.entry(key.clone()).or_insert(zed::serde_json::Value::Null);
+            if dst_entry.is_object() && src_val.is_object() {
+                merge_json(dst_entry, src_val.clone());
+            } else {
+                *dst_entry = src_val.clone();
+            }
+        }
+    }
+}
 
 /// Extract a semver-style version string from a line of `velvet --version` output.
 /// Handles patterns like:
