@@ -242,7 +242,7 @@
   "Array literal": {
     "scope": "V",
     "prefix": "array",
-    "body": ["[${1:value1}, ${2:value2}]${3:${4:!}}"],
+    "body": ["[${1:value1}, ${2:value2}]"],
     "description": "Array literal"
   },
   "Map literal": {
@@ -274,6 +274,36 @@
     "prefix": "sql",
     "body": ["sql ${1:db} {", "\tselect from ${2:Table} where ${3:condition}", "}"],
     "description": "SQL ORM query"
+  },
+  "SQL JOIN query": {
+    "scope": "V",
+    "prefix": "sqljoin",
+    "body": ["sql ${1:db} {", "\tselect from ${2:Table}", "\tjoin ${3:OtherTable} on $2.${4:id} == $3.${5:foreign_id}", "\twhere $2.${6:field} == ${7:value}", "}"],
+    "description": "SQL ORM query with explicit JOIN (V 0.5.1+)"
+  },
+  "SQL transaction": {
+    "scope": "V",
+    "prefix": "sqltx",
+    "body": ["sql ${1:db} {", "\tbegin", "}", "${0}", "sql ${1:db} {", "\tcommit", "}"],
+    "description": "SQL ORM transaction block (V 0.5.1+)"
+  },
+  "ORM select (orm.select)": {
+    "scope": "V",
+    "prefix": "ormselect",
+    "body": ["rows := orm.select(${1:db}, orm.SelectConfig{", "\ttable: '${2:table_name}'", "\twhere: ${3:where_clause}", "\torder_by: '${4:id}'", "\tlimit: ${5:100}", "}) or { panic(err) }", "${0}"],
+    "description": "ORM select using orm.select() (V 0.5+ low-level API)"
+  },
+  "db exec raw SQL": {
+    "scope": "V",
+    "prefix": "dbexec",
+    "body": ["${1:db}.exec('${2:sql}') or { panic(err) }"],
+    "description": "Execute a raw SQL query via db.exec() (V 0.5+)"
+  },
+  "db exec with params": {
+    "scope": "V",
+    "prefix": "dbexecparams",
+    "body": ["${1:db}.exec_param('${2:sql}', [${3:param}.str()]) or { panic(err) }"],
+    "description": "Execute a parameterised SQL query via db.exec_param() (V 0.5+)"
   },
   "Vweb route": {
     "scope": "V",

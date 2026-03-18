@@ -2,7 +2,7 @@
 
 A comprehensive V language extension for [Zed](https://zed.dev/), powered by [velvet](https://github.com/DaZhi-the-Revelator/velvet) with bug fixes, enhanced hover documentation, and correct symbol renaming.
 
-**Supports V 0.5.1. Extension version 0.6.3.**
+**Supports V 0.5.1. Extension version0.6.4.**
 
 ---
 
@@ -90,7 +90,7 @@ Copy-Item .\bin\velvet.exe "$env:USERPROFILE\.config\velvet\bin\velvet.exe"
 
 ```sh
 velvet --version
-# Should print: velvet version 0.2.4
+# Should print: velvet version 0.2.7
 ```
 
 ### Staying Up to Date
@@ -313,7 +313,7 @@ Every time the extension activates (i.e. when you open a `.v` file and the langu
 
 If they differ, a notice appears in the Zed language-server status bar:
 
-> velvet is out of date (local: `0.2.3`, latest release: `0.2.4`). Run: `cd velvet && git pull && v run build.vsh release`, then copy `bin/velvet` to your PATH and restart Zed.
+> velvet is out of date (local: `0.2.6`, latest release: `0.2.7`). Run: `cd velvet && git pull && v run build.vsh release`, then copy `bin/velvet` to your PATH and restart Zed.
 
 If the versions already match, or if the check fails for any reason (no network, API rate limit, etc.), nothing is shown. The check runs at most once per session and never blocks the language server from starting.
 
@@ -398,7 +398,7 @@ No language server is attached — v.mod files are static manifests and do not n
 
 ### ✅ Code Snippets
 
-50 built-in snippets for common V patterns. Type the prefix and press Tab.
+53 built-in snippets for common V patterns. Type the prefix and press Tab.
 
 #### Functions
 
@@ -501,6 +501,9 @@ No language server is attached — v.mod files are static manifests and do not n
 | `sql` | SQL ORM query |
 | `sqljoin` | SQL ORM query with explicit JOIN (V 0.5.1+) |
 | `sqltx` | SQL ORM transaction block (V 0.5.1+) |
+| `ormselect` | Low-level `orm.select()` call with `orm.SelectConfig` (V 0.5+) |
+| `dbexec` | Raw SQL via `db.exec()` (V 0.5+) |
+| `dbexecparams` | Parameterised SQL via `db.exec_param()` (V 0.5+) |
 | `route` | Vweb route handler |
 | `header` | Section comment header |
 
