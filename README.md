@@ -2,7 +2,7 @@
 
 A comprehensive V language extension for [Zed](https://zed.dev/), powered by [velvet](https://github.com/DaZhi-the-Revelator/velvet) with bug fixes, enhanced hover documentation, and correct symbol renaming.
 
-**Supports V 0.5.1. Extension version 0.6.4.**
+**Supports V 0.5.1. Extension version 0.6.5.**
 
 ---
 
@@ -121,6 +121,7 @@ All LSP intelligence is provided by velvet. This extension wires every capabilit
   - `deprecated` symbols tagged with strikethrough (`DiagnosticTag.deprecated`)
   - All errors, warnings, and notices from the actual V compiler — not heuristics
   - **Unused parameter warning** (velvet-native) — flags parameters never referenced in the function body; parameters prefixed with `_` and `test_*` functions are excluded; **disabled by default**, toggleable (see [Feature Toggles](#-feature-toggles))
+  - **Interface compliance check** (velvet-native) — warns at edit time when a struct has started implementing an interface (already provides at least one required method) but is still missing others; the warning appears on the struct name and lists every missing method, e.g. `struct 'Dog' partially implements 'Animal' but is missing: move`; **always enabled**; structs with no methods are never flagged, preventing false positives from coincidental name matches
   - **Incremental text sync** — velvet uses `TextDocumentSyncKind.incremental`, sending only per-keystroke diffs instead of the full file on every change; reduces memory and CPU on large files
 
 - **Type Checking** — Full PSI-based type inference:
@@ -242,7 +243,7 @@ All LSP intelligence is provided by velvet. This extension wires every capabilit
   - **Add `[flag]` Attribute** — adds `[flag]` to an enum definition
   - **Import Module** — detects an `undefined ident` compiler error and automatically inserts the correct `import` statement
   - **Remove Unused Import** — automatically removes import statements that the V compiler reports as unused
-  - **Extract Variable** — replaces a compound expression with a fresh `name := expr` declaration inserted on the line above; the variable name is inferred from the expression where possible
+  - **Extract Variable** — replaces a compound expression with a fresh `name := expr` declaration inserted on the line above; the variable name is inferred from the expression where possible; if the suggested name already exists in the file, velvet appends an incrementing number automatically (`extracted`, `extracted2`, `extracted3`, …)
   - **Convert `if`/`else` to `match`** — converts an `if` / `else if` chain whose every branch compares the same subject with `==` into an idiomatic V `match` block; a trailing `else` is preserved as the `match else` arm
   - **Add Missing Match Arms** — when the cursor is inside a `match` expression whose subject is an enum type, detects which variants are not yet covered and inserts stub arms with `// TODO: implement` bodies for each missing one; suppressed when an `else` arm is already present
 
