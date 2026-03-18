@@ -620,7 +620,7 @@ If velvet cannot find your V installation automatically, create a project-local 
 velvet init
 ```
 
-Then set `custom_vroot` in the generated `.velvet/config.toml`.
+This creates `.velvet/config.toml`. If the file already exists, `velvet init` **refuses to overwrite it** and prints its current contents instead. Delete the file first if you want a fresh default. Then set `custom_vroot` in the config.
 
 ### Jupyter Kernel (Optional)
 
@@ -805,6 +805,7 @@ A global config also exists at `~/.config/velvet/config.toml` and applies to all
 - velvet indexes your workspace and the V stdlib on first use — this is normal
 - Progress is shown in the Zed status bar
 - Subsequent opens use the cached index and are fast
+- The cache key includes a **CRC32 content hash** (not just the file modification timestamp), so cache hits are reliable on Windows FAT32 volumes, network drives, and other environments where `mtime` is unreliable
 
 ### Jupyter kernel not appearing in Zed
 
