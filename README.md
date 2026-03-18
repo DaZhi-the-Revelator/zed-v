@@ -45,6 +45,7 @@ A comprehensive V language extension for [Zed](https://zed.dev/), powered by [ve
   - [Server crashes on enum hover](#server-crashes-on-enum-hover)
   - [Rename only updates one occurrence](#rename-only-updates-one-occurrence)
   - [No diagnostics / formatting not working](#no-diagnostics--formatting-not-working)
+  - [Diagnostics appear delayed or show a timeout warning in logs](#diagnostics-appear-delayed-or-show-a-timeout-warning-in-logs)
   - [Indexing is slow on first open](#indexing-is-slow-on-first-open)
   - [Jupyter kernel not appearing in Zed](#jupyter-kernel-not-appearing-in-zed)
   - [Build script says "Cargo.toml or src\lib.rs has error"](#build-script-says-cargotoml-or-srclibrs-has-error--wasm-file-not-produced)
@@ -123,6 +124,7 @@ All LSP intelligence is provided by velvet. This extension wires every capabilit
   - **Unused parameter warning** (velvet-native) — flags parameters never referenced in the function body; parameters prefixed with `_` and `test_*` functions are excluded; **disabled by default**, toggleable (see [Feature Toggles](#-feature-toggles))
   - **Interface compliance check** (velvet-native) — warns at edit time when a struct has started implementing an interface (already provides at least one required method) but is still missing others; the warning appears on the struct name and lists every missing method, e.g. `struct 'Dog' partially implements 'Animal' but is missing: move`; **always enabled**; structs with no methods are never flagged, preventing false positives from coincidental name matches
   - **Incremental text sync** — velvet uses `TextDocumentSyncKind.incremental`, sending only per-keystroke diffs instead of the full file on every change; reduces memory and CPU on large files
+  - **Crash protection** — velvet wraps every `v -check`, `v vet`, and `v fmt` invocation in a hard timeout (30 s for compiler passes, 15 s for formatting); if V hangs or crashes and leaves an orphaned `v.exe` process behind, velvet kills it, discards the result, and continues serving requests without freezing Zed; the background diagnostic thread is also monitored by a watchdog that automatically restarts it if a task exceeds 60 seconds
 
 - **Type Checking** — Full PSI-based type inference:
   - Variable type inference across assignments
@@ -801,6 +803,10 @@ A global config also exists at `~/.config/velvet/config.toml` and applies to all
 
 - velvet needs the V compiler: confirm `v` is in PATH or set `custom_vroot` in config
 - Run `velvet init` in your project root and set `custom_vroot` in the generated config
+
+### Diagnostics appear delayed or show a timeout warning in logs
+
+If the Zed log shows a line like `velvet: v -check timed out; orphaned v.exe processes were killed`, it means the V compiler hung on that particular save cycle. velvet automatically killed the orphan and will retry on your next save — no action required. This typically happens on large projects where V's type-checker takes longer than 30 seconds, or after a V compiler crash leaves an orphaned process that blocks the next run. If timeouts happen consistently, try setting a per-project `custom_vroot` pointing to a fast local V build, and check that no stale `v.exe` processes are lingering in Task Manager.
 
 ### Indexing is slow on first open
 
