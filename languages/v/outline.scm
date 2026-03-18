@@ -60,9 +60,12 @@
     "}" @close)
   (#not-exists? receiver)) @item
 
-; Methods — function declarations that have a receiver
+; Methods — function declarations that have a receiver.
+; @context captures the receiver type (e.g. "Rect") so the breadcrumb
+; bar and outline panel display "Rect.area" instead of just "area".
 (function_declaration
-  receiver: (receiver)
+  receiver: (receiver
+    type: (plain_type) @context)
   name: (identifier) @name
   body: (block
     "{" @open

@@ -206,6 +206,7 @@ All LSP intelligence is provided by velvet. This extension wires every capabilit
   - Implemented in velvet via `textDocument/selectionRange`
 - **Document Symbols** — Full nested symbol tree in the outline panel:
   - Functions and methods (with signature as detail)
+  - Methods show receiver type as context prefix — e.g. `Rect.area` instead of `area` — in both the outline panel and the breadcrumb bar
   - Structs (with their fields nested inside)
   - Interfaces (with their methods and fields nested inside)
   - Enums (with their values nested inside, showing implicit values)
