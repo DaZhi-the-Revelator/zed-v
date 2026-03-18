@@ -2,7 +2,7 @@
 
 A comprehensive V language extension for [Zed](https://zed.dev/), powered by [velvet](https://github.com/DaZhi-the-Revelator/velvet) with bug fixes, enhanced hover documentation, and correct symbol renaming.
 
-**Supports V 0.5.1. Extension version0.6.4.**
+**Supports V 0.5.1. Extension version 0.6.4.**
 
 ---
 
@@ -121,6 +121,7 @@ All LSP intelligence is provided by velvet. This extension wires every capabilit
   - `deprecated` symbols tagged with strikethrough (`DiagnosticTag.deprecated`)
   - All errors, warnings, and notices from the actual V compiler — not heuristics
   - **Unused parameter warning** (velvet-native) — flags parameters never referenced in the function body; parameters prefixed with `_` and `test_*` functions are excluded; **disabled by default**, toggleable (see [Feature Toggles](#-feature-toggles))
+  - **Incremental text sync** — velvet uses `TextDocumentSyncKind.incremental`, sending only per-keystroke diffs instead of the full file on every change; reduces memory and CPU on large files
 
 - **Type Checking** — Full PSI-based type inference:
   - Variable type inference across assignments
@@ -503,7 +504,7 @@ No language server is attached — v.mod files are static manifests and do not n
 | `sqltx` | SQL ORM transaction block (V 0.5.1+) |
 | `ormselect` | Low-level `orm.select()` call with `orm.SelectConfig` (V 0.5+) |
 | `dbexec` | Raw SQL via `db.exec()` (V 0.5+) |
-| `dbexecparams` | Parameterised SQL via `db.exec_param()` (V 0.5+) |
+| `dbexecparams` | Parameterized SQL via `db.exec_param()` (V 0.5+) |
 | `route` | Vweb route handler |
 | `header` | Section comment header |
 
