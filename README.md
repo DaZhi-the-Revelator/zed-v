@@ -272,6 +272,7 @@ All LSP intelligence is provided by velvet. This extension wires every capabilit
   - **Extract Variable** — replaces a compound expression with a fresh `name := expr` declaration inserted on the line above; the variable name is inferred from the expression where possible; if the suggested name already exists in the file, velvet appends an incrementing number automatically (`extracted`, `extracted2`, `extracted3`, …)
   - **Inline Variable** — the inverse of Extract Variable; cursor on `x := <expr>` → replaces every reference to `x` in the enclosing block with `expr` and removes the declaration; only offered when `x` is referenced at least once.
   - **Convert `if`/`else` to `match`** — converts an `if` / `else if` chain whose every branch compares the same subject with `==` into an idiomatic V `match` block; a trailing `else` is preserved as the `match else` arm
+  - **Sort imports** — sorts the import block at the top of the file alphabetically without re-formatting anything else; useful as an "organize imports on save" action distinct from running `v fmt`; offered only when two or more imports are present and not already sorted
   - **Add Missing Match Arms** — when the cursor is inside a `match` expression whose subject is an enum type, detects which variants are not yet covered and inserts stub arms with `// TODO: implement` bodies for each missing one; suppressed when an `else` arm is already present
 
 ---
