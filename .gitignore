@@ -1,5 +1,4 @@
 /target
 extension/extension.wasm
-
 extension/target/
 extension/Cargo.lock
