@@ -89,6 +89,10 @@
 (pointer_type) @type
 (array_type) @type
 
+; Compile-time type categories ($struct, $enum, $int, $float, $array,
+; $map, $alias, $sumtype, $interface, $option, $function)
+(compile_time_type) @type
+
 ; ============================================================
 ; VARIABLES & PARAMETERS
 ; ============================================================
