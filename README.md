@@ -2,7 +2,7 @@
 
 A comprehensive V language extension for [Zed](https://zed.dev/), powered by [velvet](https://github.com/DaZhi-the-Revelator/velvet) with bug fixes, enhanced hover documentation, and correct symbol renaming.
 
-**Supports V 0.5.1. Extension version 0.6.6.**
+**Supports V 0.5.1. Extension version 0.6.6. Requires velvet 0.3.7+.**
 
 ---
 
@@ -111,7 +111,7 @@ Copy-Item .\bin\velvet.exe "$env:USERPROFILE\.config\velvet\bin\velvet.exe"
 
 ```sh
 velvet --version
-# Should print: velvet version 0.2.7
+# Should print: velvet version 0.3.7
 ```
 
 ### Staying Up to Date
@@ -141,7 +141,10 @@ All LSP intelligence is provided by velvet. This extension wires every capabilit
   - `unused` variables and imports tagged with strikethrough (`DiagnosticTag.unnecessary`)
   - `deprecated` symbols tagged with strikethrough (`DiagnosticTag.deprecated`)
   - All errors, warnings, and notices from the actual V compiler — not heuristics
-  - **Unused parameter warning** (velvet-native) — flags parameters never referenced in the function body; parameters prefixed with `_` and `test_*` functions are excluded; **disabled by default**, toggleable (see [Feature Toggles](#-feature-toggles))
+  - **Unused parameter warning** (velvet-native) — flags parameters never referenced in the function body; parameters prefixed with `_` and `test_*` functions are excluded; **disabled by default**, toggleable via `enable_unused_parameter_warning` (see [Feature Toggles](#-feature-toggles))
+  - **Unused variable warning** (velvet-native) — real-time PSI-based warning when a local `:=` variable is declared but never referenced; `_`-prefixed names and `test_*` functions excluded; **enabled by default**, disable via `enable_unused_variable_warning: false`
+  - **Unused import warning** (velvet-native) — real-time PSI-based warning when a module is imported but never referenced as `module.symbol`; selective imports (`import os { getenv }`) are excluded; **enabled by default**, disable via `enable_unused_import_warning: false`
+  - **Dead / unreachable code** (velvet-native) — flags any statement following an unconditional `return`, `break`, `continue`, `goto`, or `panic()`/`exit()` call in the same block; rendered greyed-out via `DiagnosticTag.unnecessary`; **always enabled**
   - **Interface compliance check** (velvet-native) — warns at edit time when a struct has started implementing an interface (already provides at least one required method) but is still missing others; the warning appears on the struct name and lists every missing method, e.g. `struct 'Dog' partially implements 'Animal' but is missing: move`; **always enabled**; structs with no methods are never flagged, preventing false positives from coincidental name matches
   - **Incremental text sync** — velvet uses `TextDocumentSyncKind.incremental`, sending only per-keystroke diffs instead of the full file on every change; reduces memory and CPU on large files
   - **Crash protection** — velvet wraps every `v -check`, `v vet`, and `v fmt` invocation in a hard timeout (30 s for compiler passes, 15 s for formatting); if V hangs or crashes and leaves an orphaned `v.exe` process behind, velvet kills it, discards the result, and continues serving requests without freezing Zed; the background diagnostic thread is also monitored by a watchdog that automatically restarts it if a task exceeds 60 seconds
@@ -199,11 +202,12 @@ All LSP intelligence is provided by velvet. This extension wires every capabilit
   - `nil` and `none` in the correct contexts
   - Module name completions
   - Top-level declaration completions
-- **Signature Help** — Real-time parameter hints as you type function calls:
+- **Signature Help** — Real-time parameter hints as you type:
   - Active parameter highlighted as you move through arguments
   - Retrigger support (`,` and ` ` re-trigger the hint)
   - Resolves the actual function declaration via PSI — always accurate
   - Works for all functions including stdlib and user-defined
+  - **Struct literal field hints** — typing `StructName{` triggers a persistent popup listing all remaining (unfilled) fields with their types; as you fill each field the hint shrinks; the field under the cursor is highlighted as the active parameter; triggered by `{` in addition to `(` and `,`
 - **Find All References** — PSI-based cross-file reference search:
   - Accurate — not text search, uses the program structure index
   - Works across modules and into the stdlib
@@ -266,6 +270,7 @@ All LSP intelligence is provided by velvet. This extension wires every capabilit
   - **Import Module** — detects an `undefined ident` compiler error and automatically inserts the correct `import` statement
   - **Remove Unused Import** — automatically removes import statements that the V compiler reports as unused
   - **Extract Variable** — replaces a compound expression with a fresh `name := expr` declaration inserted on the line above; the variable name is inferred from the expression where possible; if the suggested name already exists in the file, velvet appends an incrementing number automatically (`extracted`, `extracted2`, `extracted3`, …)
+  - **Inline Variable** — the inverse of Extract Variable; cursor on `x := <expr>` → replaces every reference to `x` in the enclosing block with `expr` and removes the declaration; only offered when `x` is referenced at least once
   - **Convert `if`/`else` to `match`** — converts an `if` / `else if` chain whose every branch compares the same subject with `==` into an idiomatic V `match` block; a trailing `else` is preserved as the `match else` arm
   - **Add Missing Match Arms** — when the cursor is inside a `match` expression whose subject is an enum type, detects which variants are not yet covered and inserts stub arms with `// TODO: implement` bodies for each missing one; suppressed when an `else` arm is already present
 
@@ -586,7 +591,9 @@ All velvet features can be individually enabled or disabled via your Zed `settin
         "enable_run_tests_lens": true
       },
       "inspections": {
-        "enable_unused_parameter_warning": false
+        "enable_unused_parameter_warning": false,
+        "enable_unused_variable_warning": true,
+        "enable_unused_import_warning": true
       }
     }
   }
@@ -621,6 +628,8 @@ All velvet features can be individually enabled or disabled via your Zed `settin
 | Key | Default | Description |
 |-----|---------|-------------|
 | `enable_unused_parameter_warning` | `false` | Warn when a parameter is declared but never used in the function body. Parameters prefixed with `_` and all parameters in `test_*` functions are excluded. Disabled by default — set to `true` to enable. |
+| `enable_unused_variable_warning` | `true` | Real-time PSI warning when a local `:=` variable is never referenced. `_`-prefixed names and `test_*` functions excluded. Enabled by default. |
+| `enable_unused_import_warning` | `true` | Real-time PSI warning when an import is never used as `module.symbol`. Selective imports excluded. Enabled by default. |
 
 Also configurable in `config.toml` under `[inspections]` — see the [velvet configuration docs](https://github.com/DaZhi-the-Revelator/velvet#configuration). Settings supplied via `initialization_options` take precedence over the TOML file.
 
@@ -799,6 +808,10 @@ enable_anon_fn_return_type_hints = true
 [inspections]
 # Disabled by default. Set to true to enable.
 enable_unused_parameter_warning = false
+# Real-time PSI-based unused variable warning. Enabled by default.
+enable_unused_variable_warning = true
+# Real-time PSI-based unused import warning. Enabled by default.
+enable_unused_import_warning = true
 ```
 
 A global config also exists at `~/.config/velvet/config.toml` and applies to all projects.
