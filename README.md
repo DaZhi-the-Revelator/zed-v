@@ -2,7 +2,7 @@
 
 A comprehensive V language extension for [Zed](https://zed.dev/), powered by [velvet](https://github.com/DaZhi-the-Revelator/velvet) with bug fixes, enhanced hover documentation, and correct symbol renaming.
 
-**Supports V 0.5.1. Extension version 0.6.5.**
+**Supports V 0.5.1. Extension version 0.6.6.**
 
 ---
 
@@ -55,6 +55,26 @@ A comprehensive V language extension for [Zed](https://zed.dev/), powered by [ve
   - [Checking logs](#checking-logs)
 - [Links](#links)
 - [License](#license)
+
+---
+
+## Repository Structure
+
+```txt
+v-enhanced/
+  extension/     ← Zed extension source (Rust/WASM) — point Zed here
+    src/
+    languages/
+    grammars/
+    extension.toml
+    Cargo.toml
+    build.bat / build.sh
+  kernel/        ← Jupyter kernel for Zed REPL integration (separate Rust project)
+  README.md
+  LICENSE
+```
+
+The `extension/` directory is the Zed extension itself. When installing as a dev extension, select the `extension/` folder, **not** the repo root. The `kernel/` directory is a separate Rust project — see [kernel/README.md](kernel/README.md) for its own build and install instructions.
 
 ---
 
@@ -723,21 +743,23 @@ After restarting Zed with V Enhanced active, open a `.v` file and confirm in **V
 ### Development Installation
 
 1. Clone this repository
-2. Build the extension:
+2. Build the extension (run from the `extension/` subdirectory):
 
    ```bat
    :: Windows
+   cd extension
    build.bat
    ```
 
    ```sh
    # Linux / macOS
+   cd extension
    chmod +x build.sh && ./build.sh
    ```
 
 3. In Zed, open Extensions (`Ctrl+Shift+X`)
 4. Click **Install Dev Extension**
-5. Select this folder
+5. Select the **`extension/`** folder (not the repo root)
 6. Install velvet (see above)
 
 ---
@@ -824,18 +846,20 @@ If the Zed log shows a line like `velvet: v -check timed out; orphaned v.exe pro
 
 ### Build script says "Cargo.toml or src\lib.rs has error" / WASM file not produced
 
-This message can appear even when the Rust compilation actually succeeded, if the `rustup target list` check in an older version of the script produced a false negative. The real cause is usually that the WASM copy step was never reached.
+Make sure you are running the build script from inside the `extension/` subdirectory, not the repo root. The script checks for `extension.toml` in the current directory and will exit with an error if it is not found.
 
-**Fix:** Run the build command directly, then copy the output manually:
+This message can also appear if the `rustup target list` check produced a false negative. The real cause is usually that the WASM copy step was never reached.
+
+**Fix:** Run the build command directly from `extension/`, then copy the output manually:
 
 ```bat
-:: Windows
+:: Windows — run from extension\
 cargo build --release --target wasm32-wasip1
 copy /Y target\wasm32-wasip1\release\zed_v_enhanced.wasm extension.wasm
 ```
 
 ```sh
-# Linux / macOS
+# Linux / macOS — run from extension/
 cargo build --release --target wasm32-wasip1
 cp target/wasm32-wasip1/release/zed_v_enhanced.wasm extension.wasm
 ```
@@ -844,7 +868,7 @@ If `rustup target add wasm32-wasip1` reports *"component 'Rust-std' for target '
 
 ### Features stopped working after a Zed update
 
-- Rebuild the extension with `build.bat` / `build.sh` and reinstall
+- Rebuild the extension (`cd extension && build.bat` / `./build.sh`) and reinstall
 - The automatic update check will show a notification in the status bar if your velvet binary is also out of date — follow its instructions
 
 ### velvet update notification keeps appearing

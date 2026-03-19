@@ -12,17 +12,19 @@ echo "==========================================================================
 echo ""
 echo "This script will:"
 echo "  1. Verify prerequisites (Rust, wasm32-wasip1 target)"
-echo "  2. Check for v-analyzer in PATH"
+echo "  2. Check for velvet in PATH"
 echo "  3. Clean old build artifacts"
 echo "  4. Build the Rust extension for WASM"
-echo "  5. Copy extension.wasm to the project root"
+echo "  5. Copy extension.wasm to the extension directory"
 echo "  6. Clear Zed's extension cache"
 echo ""
 echo "Prerequisites:"
 echo "  - Rust toolchain (rustup)"
 echo "  - wasm32-wasip1 target (will be installed if missing)"
-echo "  - v-analyzer installed and in PATH"
+echo "  - velvet installed and in PATH"
 echo "  - Zed fully closed"
+echo ""
+echo "Run this script from the extension/ subdirectory."
 echo ""
 read -p "Press Enter to continue..."
 echo ""
@@ -70,20 +72,27 @@ echo "  WASM target OK"
 echo ""
 
 # ==============================================================================
-# STEP 3: Check for v-analyzer
+# STEP 3: Check for velvet
 # ==============================================================================
-echo "[3/6] Checking for v-analyzer..."
+echo "[3/6] Checking for velvet..."
 
-if ! command -v v-analyzer &>/dev/null; then
+if [ ! -f "extension.toml" ]; then
+    echo "ERROR: Must be run from the extension/ subdirectory."
+    echo "Current directory: $(pwd)"
+    exit 1
+fi
+
+if ! command -v velvet &>/dev/null; then
     echo ""
-    echo "  WARNING: v-analyzer not found in PATH"
-    echo "  The extension will still build, but users will need to install v-analyzer."
+    echo "  WARNING: velvet not found in PATH"
+    echo "  The extension will still build, but users will need to install velvet."
     echo ""
-    echo "  To install v-analyzer:"
-    echo "    v download -RD https://raw.githubusercontent.com/vlang/v-analyzer/main/install.vsh"
+    echo "  To install velvet:"
+    echo "    git clone --recurse-submodules https://github.com/DaZhi-the-Revelator/velvet"
+    echo "    cd velvet && v run build.vsh release"
     echo ""
 else
-    echo "  Found: $(which v-analyzer)"
+    echo "  Found: $(which velvet)"
 fi
 echo ""
 
@@ -197,7 +206,7 @@ else
     echo "   - Press Ctrl+Shift+X (Extensions)"
 fi
 echo "   - Click 'Install Dev Extension'"
-echo "   - Browse to: $(pwd)"
+echo "   - Browse to: $(pwd)  (this extension/ subdirectory)"
 echo "   - Click Open / Select Folder"
 echo ""
 echo "4. OPEN A .v FILE and verify:"
@@ -208,8 +217,8 @@ echo "   - Inlay hints show types and parameter names"
 echo "   - Code lens shows Run / Run test buttons"
 echo ""
 echo "5. IF SOMETHING LOOKS WRONG:"
-echo "   - View -> Zed Log — look for v-analyzer entries"
-echo "   - Confirm v-analyzer is in PATH: which v-analyzer"
+echo "   - View -> Zed Log — look for velvet entries"
+echo "   - Confirm velvet is in PATH: which velvet"
 echo "   - Confirm V compiler is in PATH: which v"
 echo ""
 echo "================================================================================"
