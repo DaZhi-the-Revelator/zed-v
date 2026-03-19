@@ -68,5 +68,12 @@
     "args": ["doc", "$ZED_WORKTREE_ROOT"],
     "cwd": "$ZED_WORKTREE_ROOT",
     "tags": ["v-doc"]
+  },
+  {
+    "label": "v watch run $ZED_FILE",
+    "command": "v",
+    "args": ["watch", "run", "$ZED_FILE"],
+    "cwd": "$ZED_DIRNAME",
+    "tags": ["v-watch"]
   }
 ]

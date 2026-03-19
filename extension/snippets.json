@@ -340,5 +340,35 @@
     "prefix": "selecttimeout",
     "body": ["select {", "\t${1:ch} <- ${2:value} {", "\t\t${3}", "\t}", "\t${4:1} * time.second {", "\t\t${0}", "\t}", "}"],
     "description": "Select statement with timeout branch"
+  },
+  "Comptime for fields": {
+    "scope": "V",
+    "prefix": "compfor",
+    "body": ["$for ${1:field} in ${2:Type}.fields {", "\t${0}", "}"],
+    "description": "Compile-time for loop over struct fields ($for field in Type.fields)"
+  },
+  "Comptime for methods": {
+    "scope": "V",
+    "prefix": "compformethod",
+    "body": ["$for ${1:method} in ${2:Type}.methods {", "\t${0}", "}"],
+    "description": "Compile-time for loop over struct methods ($for method in Type.methods)"
+  },
+  "Compile error": {
+    "scope": "V",
+    "prefix": "compileerr",
+    "body": ["\$compile_error('${1:message}')"],
+    "description": "$compile_error — emit a compile-time error message"
+  },
+  "Compile warn": {
+    "scope": "V",
+    "prefix": "compilewarn",
+    "body": ["\$compile_warn('${1:message}')"],
+    "description": "$compile_warn — emit a compile-time warning message"
+  },
+  "Comptime template": {
+    "scope": "V",
+    "prefix": "tmpl",
+    "body": ["\$tmpl('${1:path/to/template.html}')"],
+    "description": "$tmpl — embed and compile an HTML template file at compile time"
   }
 }

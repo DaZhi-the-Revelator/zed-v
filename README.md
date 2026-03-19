@@ -2,7 +2,7 @@
 
 A comprehensive V language extension for [Zed](https://zed.dev/), powered by [velvet](https://github.com/DaZhi-the-Revelator/velvet) with bug fixes, enhanced hover documentation, and correct symbol renaming.
 
-**Supports V 0.5.1. Extension version 0.6.7. Requires velvet 0.3.7+.**
+**Supports V 0.5.1. Extension version 0.6.8. Requires velvet 0.4.0+.**
 
 ---
 
@@ -42,6 +42,7 @@ A comprehensive V language extension for [Zed](https://zed.dev/), powered by [ve
   - [Per-Project velvet Config](#per-project-velvet-config)
 - [Troubleshooting](#troubleshooting)
   - [velvet not found](#velvet-not-found)
+  - [Running velvet check in CI produces no output / exits 0 on a dirty project](#running-velvet-check-in-ci-produces-no-output--exits-0-on-a-dirty-project)
   - [Server crashes on enum hover](#server-crashes-on-enum-hover)
   - [Rename only updates one occurrence](#rename-only-updates-one-occurrence)
   - [No diagnostics / formatting not working](#no-diagnostics--formatting-not-working)
@@ -111,7 +112,7 @@ Copy-Item .\bin\velvet.exe "$env:USERPROFILE\.config\velvet\bin\velvet.exe"
 
 ```sh
 velvet --version
-# Should print: velvet version 0.3.7
+# Should print: velvet version 0.4.0
 ```
 
 ### Staying Up to Date
@@ -123,6 +124,20 @@ cd velvet
 git pull
 v run build.vsh release
 # then copy the binary to PATH as above
+```
+
+To check whether a newer release is available without rebuilding:
+
+```sh
+velvet check-updates
+```
+
+To run `v vet` across your whole V project from the command line (useful in CI or pre-commit hooks):
+
+```sh
+velvet check             # human-readable output, exits 0/1/2
+velvet check --json      # JSON array — pipe into jq, reviewdog, etc.
+velvet check --no-color  # plain text for log files
 ```
 
 ---
@@ -300,6 +315,7 @@ Press `F4` to open the full task list for the current file. Available tasks:
 | `v vet <file>` | `v vet $ZED_FILE` | Any `.v` file |
 | `v vet <project>` | `v vet $ZED_WORKTREE_ROOT` | When a worktree is open |
 | `v doc <project>` | `v doc $ZED_WORKTREE_ROOT` | When a worktree is open |
+| `v watch run <file>` | `v watch run $ZED_FILE` | Any `.v` file |
 
 All tasks run from the directory containing the source file (`$ZED_DIRNAME`) or the project root, as appropriate.
 
@@ -345,7 +361,7 @@ Every time the extension activates (i.e. when you open a `.v` file and the langu
 
 If they differ, a notice appears in the Zed language-server status bar:
 
-> velvet is out of date (local: `0.2.6`, latest release: `0.2.7`). Run: `cd velvet && git pull && v run build.vsh release`, then copy `bin/velvet` to your PATH and restart Zed.
+> velvet is out of date (local: `0.3.9`, latest release: `0.4.0`). Run: `cd velvet && git pull && v run build.vsh release`, then copy `bin/velvet` to your PATH and restart Zed.
 
 If the versions already match, or if the check fails for any reason (no network, API rate limit, etc.), nothing is shown. The check runs at most once per session and never blocks the language server from starting.
 
@@ -538,6 +554,16 @@ No language server is attached — v.mod files are static manifests and do not n
 | `dbexecparams` | Parameterized SQL via `db.exec_param()` (V 0.5+) |
 | `route` | Vweb route handler |
 | `header` | Section comment header |
+
+#### Compile-time
+
+| Prefix | Description |
+|--------|-------------|
+| `compfor` | `$for field in Type.fields { }` — iterate struct fields at compile time |
+| `compformethod` | `$for method in Type.methods { }` — iterate struct methods at compile time |
+| `compileerr` | `$compile_error('…')` — emit a compile-time error |
+| `compilewarn` | `$compile_warn('…')` — emit a compile-time warning |
+| `tmpl` | `$tmpl('path.html')` — embed and compile an HTML template at compile time |
 
 ---
 
@@ -826,6 +852,15 @@ A global config also exists at `~/.config/velvet/config.toml` and applies to all
 - Confirm it is in your PATH: `where velvet` (Windows) / `which velvet` (Linux/Mac)
 - Build and install from: `https://github.com/DaZhi-the-Revelator/velvet`
 - Restart Zed after installing
+
+### Running velvet check in CI produces no output / exits 0 on a dirty project
+
+`velvet check` runs `v vet` on the path you give it. A few things to verify:
+
+- **Working directory** — with no argument, velvet checks the current working directory. Make sure your CI job `cd`s into the project root before running it, or pass the path explicitly: `velvet check /path/to/project`.
+- **v not on PATH** — velvet shells out to `v vet`. If `v` is not on the CI agent's PATH, velvet exits with `[ERROR] Cannot find the V executable`. Install V before calling velvet check, or set `VROOT` in the environment.
+- **Exit code** — `velvet check` exits `0` when there are no issues, `1` when there are warnings only, and `2` when there is at least one error. Configure your CI step to fail on exit code ≥ 1 if you want warnings to block the build, or ≥ 2 if you only care about errors.
+- **JSON mode** — for richer CI integration, run `velvet check --json` and parse the output with `jq` or a tool like [reviewdog](https://github.com/reviewdog/reviewdog).
 
 ### Server crashes on enum hover
 
