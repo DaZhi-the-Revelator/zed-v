@@ -1,4 +1,5 @@
 /target
-/extension.wasm
-/grammars
-Cargo.lock
+extension/extension.wasm
+
+extension/target/
+extension/Cargo.lock

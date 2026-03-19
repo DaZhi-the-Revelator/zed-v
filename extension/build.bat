@@ -10,7 +10,7 @@ echo This script will:
 echo   1. Verify prerequisites (Rust, wasm32-wasip1 target)
 echo   2. Clean old build artifacts
 echo   3. Build the Rust extension for WASM
-echo   4. Copy extension.wasm to the project root
+echo   4. Copy extension.wasm to the extension directory
 echo   5. Clear Zed's extension cache
 echo.
 echo Prerequisites:
@@ -18,6 +18,8 @@ echo   - Rust toolchain (rustup)
 echo   - wasm32-wasip1 target (will be installed if missing)
 echo   - velvet installed and in PATH
 echo   - Zed fully closed
+echo.
+echo Run this script from the extension\ subdirectory.
 echo.
 pause
 echo.
@@ -44,14 +46,22 @@ echo.
 :: ==============================================================================
 echo [2/5] Checking for velvet...
 
+if not exist extension.toml (
+    echo ERROR: Must be run from the extension\ subdirectory.
+    echo Current directory: %CD%
+    pause
+    exit /b 1
+)
+
 where velvet >nul 2>&1
 if %errorlevel% neq 0 (
     echo.
     echo   WARNING: velvet not found in PATH
     echo   The extension will still build, but users will need to install velvet.
     echo.
-    echo   To install velvet, see this link:
-    echo     https://github.com/DaZhi-the-Revelator/velvet?tab=readme-ov-file#installation
+    echo   To install velvet:
+    echo     git clone --recurse-submodules https://github.com/DaZhi-the-Revelator/velvet
+    echo     cd velvet ^&^& v run build.vsh release
     echo.
 ) else (
     for /f "tokens=*" %%i in ('where velvet') do echo   Found: %%i
@@ -155,7 +165,7 @@ echo.
 echo 3. INSTALL DEV EXTENSION
 echo    - Press Ctrl+Shift+X (Extensions)
 echo    - Click "Install Dev Extension"
-echo    - Browse to: %CD%
+echo    - Browse to: %CD%  (this extension\ subdirectory)
 echo    - Click Select Folder
 echo.
 echo 4. OPEN A .v FILE and verify:

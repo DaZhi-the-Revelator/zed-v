@@ -1,0 +1,3 @@
+[submodule "extension/grammars/v"]
+	path = extension/grammars/v
+	url = https://github.com/DaZhi-the-Revelator/tree-sitter-v
