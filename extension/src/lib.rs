@@ -66,7 +66,9 @@ impl zed::Extension for VEnhancedExtension {
                 "enable_implicit_err_hints": true,
                 "enable_constant_type_hints": true,
                 "enable_enum_field_value_hints": true,
-                "enable_anon_fn_return_type_hints": true
+                "enable_anon_fn_return_type_hints": true,
+                "enable_struct_field_name_hints": true,
+                "enable_struct_field_order_hints": true
             },
             "enable_semantic_tokens": "full",
             "code_lens": {
