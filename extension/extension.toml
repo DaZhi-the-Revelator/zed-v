@@ -10,7 +10,7 @@ snippets = "snippets.json"
 
 [grammars.v]
 repository = "https://github.com/DaZhi-the-Revelator/tree-sitter-v"
-commit = "186b64e7af646c906ec243c0c22fbc31debd2386"
+commit = "7952777ee487d4866db0cc4ca654b8dec594dda0"
 
 [language_servers.velvet]
 name = "velvet"
