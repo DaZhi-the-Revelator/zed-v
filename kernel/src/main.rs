@@ -224,6 +224,14 @@ impl KernelState {
 
     /// Classify and accumulate a cell, then run it.
     ///
+    /// Magic commands:
+    ///   %reset  — clear all accumulated declarations and reset the execution
+    ///             counter to 0. Returns a confirmation message and does NOT
+    ///             invoke the V compiler.
+    ///   %show   — print the complete synthesised V source file that would be
+    ///             prepended to the next cell. Useful for inspecting accumulated
+    ///             state. Returns the source as plain stream output.
+    ///
     /// Declarations (fn, struct, enum, …) are accumulated across cells so
     /// later cells can reference earlier definitions.
     ///
@@ -234,6 +242,34 @@ impl KernelState {
     ///
     /// Returns (stdout, stderr, is_error).
     fn execute(&mut self, code: &str) -> (String, String, bool) {
+        let trimmed = code.trim();
+
+        // ── %reset ────────────────────────────────────────────────────────────
+        if trimmed == "%reset" {
+            let prev_count = self.execution_count;
+            let prev_decls = self.declarations.len();
+            self.declarations.clear();
+            self.execution_count = 0;
+            let msg = format!(
+                "[v-kernel] Session reset.\n\
+                 Cleared {prev_decls} accumulated declaration(s). \
+                 Execution counter was {prev_count}, now reset to 0.\n"
+            );
+            return (msg, String::new(), false);
+        }
+
+        // ── %show ─────────────────────────────────────────────────────────────
+        if trimmed == "%show" {
+            let source = self.build_source(&[]);
+            let out = if self.declarations.is_empty() {
+                "[v-kernel] No declarations accumulated yet.\n".to_string()
+            } else {
+                format!("[v-kernel] Accumulated source ({} declaration(s)):\n\n{source}",
+                    self.declarations.len())
+            };
+            return (out, String::new(), false);
+        }
+
         self.execution_count += 1;
 
         let (new_decls, cell_stmts) = classify(code);
@@ -643,12 +679,52 @@ fn run_v(src: &PathBuf, state: &mut KernelState) -> (String, String, bool) {
     state.running_pid = None;
 
     let stdout = String::from_utf8_lossy(&output.stdout).to_string();
-    let stderr = String::from_utf8_lossy(&output.stderr).to_string();
+    let raw_stderr = String::from_utf8_lossy(&output.stderr).to_string();
     // Base is_error purely on exit status. Do NOT check stdout.is_empty() —
     // dump() writes to stderr on success, so stderr is non-empty on normal runs.
-    let is_error = !output.status.success() && !stderr.contains("Killed");
+    let is_error = !output.status.success() && !raw_stderr.contains("Killed");
+
+    // Rewrite cell_N.v:LINE:COL: references in error messages so they point to
+    // the line number within the cell rather than a meaningless temp filename.
+    // e.g. "/tmp/v-kernel-abc/cell_3.v:7:5: error: ..." → "line 7:5: error: ..."
+    let stderr = rewrite_cell_paths(&raw_stderr, src);
 
     (stdout, stderr, is_error)
+}
+
+/// Replace occurrences of the temp cell filename in `text` with `line N`.
+///
+/// The V compiler emits paths in one of two forms:
+///   /full/path/to/cell_3.v:7:5: error: …      (absolute path)
+///   cell_3.v:7:5: error: …                    (basename only)
+///
+/// Both are replaced with `line 7:5: error: …` so error messages make
+/// sense in the context of the cell the user just executed.
+fn rewrite_cell_paths(text: &str, src: &PathBuf) -> String {
+    // Build the two patterns to replace: full path and basename.
+    let full = src.to_string_lossy().to_string();
+    let basename = src
+        .file_name()
+        .map(|n| n.to_string_lossy().to_string())
+        .unwrap_or_default();
+
+    // Replace full path first (it subsumes the basename on most systems),
+    // then any remaining basename-only occurrences.
+    let step1 = if !full.is_empty() {
+        text.replace(&full, "cell")
+    } else {
+        text.to_string()
+    };
+    let step2 = if !basename.is_empty() && basename != full {
+        step1.replace(&basename, "cell")
+    } else {
+        step1
+    };
+
+    // Now rewrite "cell:LINE:COL:" → "line LINE:COL:" and "cell:LINE:" → "line LINE:"
+    // The V compiler always separates the location with `:` so a simple
+    // prefix replacement on `cell:` is sufficient.
+    step2.replace("cell:", "line ")
 }
 
 // ── Process interrupt ───────────────────────────────────────────────────────

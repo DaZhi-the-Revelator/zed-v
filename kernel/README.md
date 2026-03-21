@@ -298,6 +298,61 @@ v-kernel/
 
 ---
 
+## Magic Commands
+
+The kernel recognises two special single-line commands. These are handled before any V source is compiled, so they always succeed regardless of accumulated session state.
+
+### `%reset`
+
+Clears all accumulated declarations and resets the execution counter to 0. Use this when you want to start a fresh session without restarting the kernel process.
+
+```v
+// %%
+struct Point { x f64  y f64 }
+fn (p Point) length() f64 { return p.x }   // intentionally wrong
+
+// %%
+%reset
+// → [v-kernel] Session reset.
+//   Cleared 2 accumulated declaration(s). Execution counter was 2, now reset to 0.
+
+// %%
+struct Point { x f64  y f64 }  // redefine cleanly
+fn (p Point) length() f64 { return p.x * p.x + p.y * p.y }  // fixed
+```
+
+`%reset` does not restart the kernel process — ZeroMQ sockets stay open and Zed does not lose the session.
+
+### `%show`
+
+Prints the complete synthesised V source file that the kernel currently holds — everything that would be prepended before the next cell's `fn main()`. Use this to understand what state has accumulated, especially when a cell fails with an unexpected "undefined" or "already defined" error.
+
+```v
+// %%
+import math
+struct Vec2 { x f64  y f64 }
+fn (v Vec2) length() f64 { return math.sqrt(v.x*v.x + v.y*v.y) }
+
+// %%
+%show
+// → [v-kernel] Accumulated source (3 declaration(s)):
+//
+//   module main
+//
+//   import math
+//
+//   struct Vec2 {
+//       x f64
+//       y f64
+//   }
+//
+//   fn (v Vec2) length() f64 {
+//       return math.sqrt(v.x*v.x + v.y*v.y)
+//   }
+```
+
+---
+
 ## Limitations
 
 - **No autocomplete / introspection** — the kernel runs code but does not expose completion or inspection endpoints (those come from velvet via the LSP, which works independently)

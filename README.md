@@ -2,7 +2,7 @@
 
 A comprehensive V language extension for [Zed](https://zed.dev/), powered by [velvet](https://github.com/DaZhi-the-Revelator/velvet) with bug fixes, enhanced hover documentation, and correct symbol renaming.
 
-**Supports V 0.5.1. Extension version 0.7.1. Requires velvet 0.4.0+.**
+**Supports V 0.5.1. Extension version 0.7.2. Requires velvet 0.4.0+.**
 
 ---
 
@@ -283,6 +283,7 @@ All LSP intelligence is provided by velvet. This extension wires every capabilit
   - **Unused import warning** (velvet-native) — real-time PSI-based warning when a module is imported but never referenced as `module.symbol`; selective imports (`import os { getenv }`) are excluded; **enabled by default**, disable via `enable_unused_import_warning: false`
   - **Dead / unreachable code** (velvet-native) — flags any statement following an unconditional `return`, `break`, `continue`, `goto`, or `panic()`/`exit()` call in the same block; rendered greyed-out via `DiagnosticTag.unnecessary`; **always enabled**.
   - **Interface compliance check** (velvet-native) — warns at edit time when a struct has started implementing an interface (already provides at least one required method) but is still missing others; the warning appears on the struct name and lists every missing method, e.g. `struct 'Dog' partially implements 'Animal' but is missing: move`; **always enabled**; structs with no methods are never flagged, preventing false positives from coincidental name matches
+  - **For-loop copy mutation warning** (velvet-native) — warns when a `for item in collection { item.field = x }` loop modifies a field through a loop variable that was not declared `mut`; since `item` is a copy, the assignment silently has no effect on the original collection; the warning points to the loop variable and suggests `for mut item in …`; **always enabled**; only fires on selector or index assignments, not bare reassignments (which are already compiler errors)
   - **Incremental text sync** — velvet uses `TextDocumentSyncKind.incremental`, sending only per-keystroke diffs instead of the full file on every change; reduces memory and CPU on large files
   - **Crash protection** — velvet wraps every `v -check`, `v vet`, and `v fmt` invocation in a hard timeout (30 s for compiler passes, 15 s for formatting); if V hangs or crashes and leaves an orphaned `v.exe` process behind, velvet kills it, discards the result, and continues serving requests without freezing Zed; the background diagnostic thread is also monitored by a watchdog that automatically restarts it if a task exceeds 60 seconds
 
@@ -465,6 +466,9 @@ Quick summary:
 - `dump()` output is rendered as a styled HTML table (columns: location · name · type · value)
 - Press `Ctrl+Shift+Enter` (Windows/Linux) or `Cmd+Shift+Enter` (macOS) to execute the current cell
 - If the kernel doesn't appear in Zed's picker, run **"REPL: Refresh Kernelspecs"** from the command palette (`Ctrl+Shift+P`)
+- **`%reset`** clears all accumulated declarations and resets the counter without restarting the kernel process
+- **`%show`** prints the full synthesised V source the kernel currently holds, so you can inspect accumulated state
+- Compiler error messages are rewritten to show `line N:COL:` instead of the meaningless temp filename `cell_3.v:N:COL:`
 
 ### Example REPL session
 
