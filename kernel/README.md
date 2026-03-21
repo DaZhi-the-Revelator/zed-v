@@ -169,6 +169,90 @@ If the V kernel doesn't appear in Zed's kernel picker, run **"REPL: Refresh Kern
 
 ---
 
+## Example Session
+
+The session below covers the main patterns a learner will hit. Create any `.v` file, paste the cells in order, and execute each one with `Ctrl+Shift+Enter` / `Cmd+Shift+Enter`.
+
+```v
+import math
+
+// %%
+
+// ---- Cell 1: Declarations -----------------------------------------------
+// Top-level declarations accumulate for the whole session.
+// Re-running this cell is safe — the kernel guards against redeclaration errors.
+
+struct Vec2 {
+    x f64
+    y f64
+}
+
+fn (v Vec2) length() f64 {
+    return math.sqrt(v.x * v.x + v.y * v.y)
+}
+
+fn (v Vec2) add(other Vec2) Vec2 {
+    return Vec2{ x: v.x + other.x, y: v.y + other.y }
+}
+
+// Output: (none — declarations produce no output)
+
+// %%
+
+// ---- Cell 2: Exploration with dump() ------------------------------------
+// Bare statements run in an isolated fn main() for this cell only.
+// dump() renders as a styled HTML table instead of raw text.
+
+a := Vec2{ x: 3.0, y: 4.0 }
+b := Vec2{ x: 1.0, y: 2.0 }
+dump(a)            // table row → location | a | Vec2 | Vec2{x: 3.0, y: 4.0}
+dump(a.length())   // table row → location | a.length() | f64 | 5.0
+dump(a.add(b))     // table row → location | a.add(b) | Vec2 | Vec2{x: 4.0, y: 6.0}
+
+// %%
+
+// ---- Cell 3: Scope boundary (important!) --------------------------------
+// 'a' and 'b' from Cell 2 are gone — they were local to that cell's fn main().
+// Declarations from Cell 1 (Vec2, length, add) are still available.
+
+c := Vec2{ x: 3.0, y: 4.0 }.add(Vec2{ x: 1.0, y: 2.0 })
+dump(c)                              // Vec2{x: 4.0, y: 6.0}
+println('length: ${c.length():.4f}') // length: 7.2111
+
+// %%
+
+// ---- Cell 4: Error handling ---------------------------------------------
+// Functions that return result/option types are fully supported.
+
+fn safe_sqrt(x f64) !f64 {
+    if x < 0 {
+        return error('cannot take sqrt of negative number: ${x}')
+    }
+    return math.sqrt(x)
+}
+
+// Successful call:
+println(safe_sqrt(9.0)!)    // 3.0
+
+// Failed call — handled with or {}:
+result := safe_sqrt(-1.0) or {
+    println('caught: ${err}')  // caught: cannot take sqrt of negative number: -1.0
+    0.0
+}
+dump(result)  // 0.0
+```
+
+**What to observe in each cell:**
+
+| Cell | What to notice |
+|------|---------------|
+| 1 | No output — declarations are silently registered for the session |
+| 2 | Three `dump()` calls render as a single HTML table with four columns |
+| 3 | `a` from Cell 2 is undefined here; `Vec2` from Cell 1 is still available |
+| 4 | `!` and `or {}` work normally; the kernel reports the error message as stream text |
+
+---
+
 ## Cell separator
 
 Zed uses `// %%` to delimit REPL cells in non-notebook files:

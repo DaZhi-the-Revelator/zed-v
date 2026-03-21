@@ -8,6 +8,7 @@ A comprehensive V language extension for [Zed](https://zed.dev/), powered by [ve
 
 ## Table of Contents
 
+- [Quick Start](#quick-start)
 - [⚠️ Important: velvet Required](#%EF%B8%8F-important-velvet-required)
   - [Why velvet?](#why-velvet)
   - [Installing velvet](#installing-velvet)
@@ -76,6 +77,127 @@ v-enhanced/
 ```
 
 The `extension/` directory is the Zed extension itself. When installing as a dev extension, select the `extension/` folder, **not** the repo root. The `kernel/` directory is a separate Rust project — see [kernel/README.md](kernel/README.md) for its own build and install instructions.
+
+---
+
+## Quick Start
+
+This section shows what working in V Enhanced actually looks like. Paste the program below into a new `shapes.v` file, then read the annotations to see which extension feature each line exercises.
+
+```v
+module main
+
+import math
+
+// Hover over 'Shape' — velvet renders the full interface body inline.
+interface Shape {
+    area() f64
+    name() string
+}
+
+// @[required] is a compile-time guard: forgetting 'radius' in a Circle{}
+// literal is a compile error, not a runtime panic.
+struct Circle {
+    @[required]
+    radius f64
+}
+
+struct Rect {
+    @[required]
+    width f64
+    @[required]
+    height f64
+}
+
+// Hover over 'c' — velvet shows '(c Circle) area() f64' with the doc comment.
+// The outline panel lists this as 'Circle.area', not just 'area'.
+fn (c Circle) area() f64  { return math.pi * c.radius * c.radius }
+fn (c Circle) name() string { return 'circle' }
+fn (r Rect)   area() f64  { return r.width * r.height }
+fn (r Rect)   name() string { return 'rect' }
+
+// Type a new variant here and the interface-compliance warning fires immediately
+// if you forget to add area() or name() — before you even save.
+
+// Generic function — hover over 'T' to see the type parameter.
+// velvet resolves generics through instantiation: T becomes f64 at the call site.
+fn largest[T](a T, b T) T {
+    return if a > b { a } else { b }
+}
+
+// Function returning a result type. Callers must handle the error.
+fn parse_radius(s string) !f64 {
+    r := s.f64()
+    if r <= 0 {
+        return error('radius must be positive, got: ${s}')
+    }
+    return r
+}
+
+fn print_shape(s Shape) {
+    // Inlay hint: velvet shows the inferred return type of the anonymous fn.
+    describe := fn(label string, val f64) string {
+        return '${label}: ${val:.2f}'
+    }
+    println('${s.name()} — ${describe('area', s.area())}')
+}
+
+fn main() {
+    shapes := [Circle{ radius: 3.0 }, Rect{ width: 4.0, height: 5.0 }] as []Shape
+
+    for s in shapes {
+        print_shape(s)
+    }
+
+    // Error propagation with !: if parse_radius returns an error, main exits.
+    // Remove the or{} block and change the return type of main to ! to use ! instead.
+    r := parse_radius('7.5') or {
+        eprintln('bad input: ${err}')
+        return
+    }
+    println('parsed radius: ${r}')
+    println('largest of 3.0 and ${r}: ${largest(3.0, r)}')
+
+    // $if is erased at compile time — only one branch is compiled into the binary.
+    \$if windows {
+        println('running on Windows')
+    } \$else {
+        println('running on Linux / macOS')
+    }
+}
+```
+
+**What lights up as you work:**
+
+| Action | Feature |
+|--------|--------|
+| Hover `Shape` / `Circle` / `Rect` | Full interface or struct body rendered in the popup |
+| Hover a method name at its call site | Signature + doc comment |
+| Place cursor after `Circle{` | Signature help lists remaining required fields |
+| Add a new struct that partially implements `Shape` | Interface compliance warning appears instantly, listing the missing method |
+| `F2` on `radius` | Safe rename updates every reference across the file |
+| `Alt+Shift+→` inside `for s in shapes` | Selection expands: identifier → expression → statement → block → function |
+| Select the body of `print_shape`, invoke code-action light-bulb | **Extract Function** offered |
+| Cursor on `parse_radius`, light-bulb | **Generate Constructor** is not offered (no struct), but on `Circle` it is |
+| `F4` | Task picker: `v run`, `v build`, `v vet`, `v doc`, `v watch run` |
+
+**To run it:**
+
+```sh
+# From Zed: press F4 and choose 'v run <file>'
+# Or from the terminal:
+v run shapes.v
+```
+
+Expected output:
+
+```
+circle — area: 28.27
+rect — area: 20.00
+parsed radius: 7.5
+largest of 3.0 and 7.5: 7.5
+running on Linux / macOS
+```
 
 ---
 
@@ -344,6 +466,56 @@ Quick summary:
 - Press `Ctrl+Shift+Enter` (Windows/Linux) or `Cmd+Shift+Enter` (macOS) to execute the current cell
 - If the kernel doesn't appear in Zed's picker, run **"REPL: Refresh Kernelspecs"** from the command palette (`Ctrl+Shift+P`)
 
+### Example REPL session
+
+Create a new `.v` file, add `// %%` separators between cells, and press `Ctrl+Shift+Enter` (or `Cmd+Shift+Enter`) to execute each one:
+
+```v
+import math
+
+// %%
+
+// Cell 1 — top-level declarations accumulate for the rest of the session.
+// Re-running this cell is safe: velvet wraps it in a guard so you never
+// get 'struct already declared' errors.
+struct Vec2 {
+    x f64
+    y f64
+}
+
+fn (v Vec2) length() f64 {
+    return math.sqrt(v.x * v.x + v.y * v.y)
+}
+
+fn (v Vec2) add(other Vec2) Vec2 {
+    return Vec2{ x: v.x + other.x, y: v.y + other.y }
+}
+
+// %%
+
+// Cell 2 — statements run in an isolated fn main().
+// dump() renders as a styled table: location · name · type · value
+a := Vec2{ x: 3.0, y: 4.0 }
+b := Vec2{ x: 1.0, y: 2.0 }
+dump(a)           // → table row: a  Vec2  Vec2{x: 3.0, y: 4.0}
+dump(a.length())  // → table row: a.length()  f64  5.0
+
+// %%
+
+// Cell 3 — builds on declarations from Cell 1; 'a' from Cell 2 is gone
+// (bare statements don’t leak across cells).
+result := a.add(b)   // ← compile error: 'a' is not defined here
+// Fix: re-declare a in this cell, or promote it to a const in Cell 1.
+c := Vec2{ x: 3.0, y: 4.0 }.add(Vec2{ x: 1.0, y: 2.0 })
+dump(c)           // → table row: c  Vec2  Vec2{x: 4.0, y: 6.0}
+println('length: ${c.length():.4f}')
+```
+
+Key things to notice:
+- **Declarations in Cell 1** (`struct Vec2`, `fn length`, `fn add`) are available in every later cell without re-running them.
+- **`dump()` rows** appear as a formatted HTML table instead of raw `[main.v:N] x = Type(value)` text.
+- **Bare variables** (`a`, `b` in Cell 2) are local to that cell's `fn main()` and do not carry over — Cell 3 demonstrates this with an intentional error and the fix.
+
 See [kernel/README.md](kernel/README.md) for full details on how it works, architecture, and limitations.
 
 ---
@@ -451,7 +623,7 @@ No language server is attached — v.mod files are static manifests and do not n
 
 ### ✅ Code Snippets
 
-53 built-in snippets for common V patterns. Type the prefix and press Tab.
+63 built-in snippets for common V patterns. Type the prefix and press Tab.
 
 #### Functions
 
@@ -560,6 +732,33 @@ No language server is attached — v.mod files are static manifests and do not n
 | `route` | Vweb route handler |
 | `header` | Section comment header |
 
+#### Generics
+
+| Prefix | Description |
+|--------|-------------|
+| `fng` | Generic function with a type parameter (`fn name[T](val T) T`) |
+| `structg` | Generic struct with a type parameter (`struct Name[T]`) |
+
+#### Concurrency — shared state
+
+| Prefix | Description |
+|--------|-------------|
+| `shared` | `shared` variable declaration — must be accessed inside `lock`/`rlock` blocks |
+| `rlock` | `rlock` block — read-only lock (multiple readers allowed simultaneously) |
+
+#### Error / option propagation
+
+| Prefix | Description |
+|--------|-------------|
+| `prop` | `result := fn_call()!` — propagate a result error; equivalent to `or { return err }` |
+| `propopt` | `result := fn_call()?` — propagate an option; equivalent to `or { return none }` |
+
+#### Attributes
+
+| Prefix | Description |
+|--------|-------------|
+| `required` | `@[required]` on a struct field — omitting it in a literal is a compile error |
+
 #### Compile-time
 
 | Prefix | Description |
@@ -569,6 +768,8 @@ No language server is attached — v.mod files are static manifests and do not n
 | `compileerr` | `$compile_error('…')` — emit a compile-time error |
 | `compilewarn` | `$compile_warn('…')` — emit a compile-time warning |
 | `tmpl` | `$tmpl('path.html')` — embed and compile an HTML template at compile time |
+| `compifos` | `$if windows/linux/macos … $else` — OS-specific compile-time branch (erased for other platforms) |
+| `compif` | `$if <condition>` — generic compile-time conditional (os, arch, compiler flags) |
 
 ---
 

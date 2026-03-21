@@ -370,5 +370,59 @@
     "prefix": "tmpl",
     "body": ["\$tmpl('${1:path/to/template.html}')"],
     "description": "$tmpl — embed and compile an HTML template file at compile time"
+  },
+  "Generic function": {
+    "scope": "V",
+    "prefix": "fng",
+    "body": ["fn ${1:name}[${2:T}](${3:val} ${2:T}) ${2:T} {", "\t${0}", "}"],
+    "description": "Generic function with a type parameter"
+  },
+  "Generic struct": {
+    "scope": "V",
+    "prefix": "structg",
+    "body": ["struct ${1:Name}[${2:T}] {", "\t${3:value} ${2:T}", "}"],
+    "description": "Generic struct with a type parameter"
+  },
+  "Required field attribute": {
+    "scope": "V",
+    "prefix": "required",
+    "body": ["\t@[required]", "\t${1:field} ${2:type}"],
+    "description": "@[required] attribute — struct field must be set in every literal; omitting it is a compile error"
+  },
+  "Rlock block": {
+    "scope": "V",
+    "prefix": "rlock",
+    "body": ["rlock ${1:shared_var} {", "\t${0}", "}"],
+    "description": "rlock block — read-only lock for a shared variable (multiple readers allowed simultaneously)"
+  },
+  "Shared variable": {
+    "scope": "V",
+    "prefix": "shared",
+    "body": ["shared ${1:name} := ${2:StructName}{}"],
+    "description": "shared variable declaration — must be accessed inside lock/rlock blocks"
+  },
+  "Propagate error": {
+    "scope": "V",
+    "prefix": "prop",
+    "body": ["${1:result} := ${2:fn_call}()!"],
+    "description": "Propagate result error with ! — equivalent to 'or { return err }'; function must return a result type"
+  },
+  "Propagate option": {
+    "scope": "V",
+    "prefix": "propopt",
+    "body": ["${1:result} := ${2:fn_call}()?"],
+    "description": "Propagate option with ? — equivalent to 'or { return none }'; function must return an option type"
+  },
+  "Comptime if OS": {
+    "scope": "V",
+    "prefix": "compifos",
+    "body": ["\$if ${1|windows,linux,macos,android,ios|} {", "\t${2}", "} \$else {", "\t${0}", "}"],
+    "description": "$if <os> — compile-time OS condition; branches are erased at compile time for other platforms"
+  },
+  "Comptime if feature": {
+    "scope": "V",
+    "prefix": "compif",
+    "body": ["\$if ${1:condition} {", "\t${0}", "}"],
+    "description": "$if <condition> — generic compile-time conditional (os, arch, compiler, custom flags)"
   }
 }
