@@ -156,7 +156,7 @@ All LSP intelligence is provided by velvet. This extension wires every capabilit
   - `unused` variables and imports tagged with strikethrough (`DiagnosticTag.unnecessary`)
   - `deprecated` symbols tagged with strikethrough (`DiagnosticTag.deprecated`)
   - All errors, warnings, and notices from the actual V compiler — not heuristics
-  - **Unused parameter warning** (velvet-native) — flags parameters never referenced in the function body; parameters prefixed with `_` and `test_*` functions are excluded; **disabled by default**, toggleable via `enable_unused_parameter_warning` (see [Feature Toggles](#-feature-toggles))
+  - **Unused parameter warning** (velvet-native) — flags parameters never referenced in the function body; parameters prefixed with `_` and `test_*` functions are excluded; **enabled by default**, toggleable via `enable_unused_parameter_warning` (see [Feature Toggles](#-feature-toggles))
   - **Unused variable warning** (velvet-native) — real-time PSI-based warning when a local `:=` variable is declared but never referenced; `_`-prefixed names and `test_*` functions excluded; **enabled by default**, disable via `enable_unused_variable_warning: false`
   - **Unused import warning** (velvet-native) — real-time PSI-based warning when a module is imported but never referenced as `module.symbol`; selective imports (`import os { getenv }`) are excluded; **enabled by default**, disable via `enable_unused_import_warning: false`
   - **Dead / unreachable code** (velvet-native) — flags any statement following an unconditional `return`, `break`, `continue`, `goto`, or `panic()`/`exit()` call in the same block; rendered greyed-out via `DiagnosticTag.unnecessary`; **always enabled**.
@@ -254,7 +254,7 @@ All LSP intelligence is provided by velvet. This extension wires every capabilit
   - Enums (with their values nested inside, showing implicit values)
   - Constants (with type and value)
   - Type aliases
-- **Inlay Hints** — 7 types of inline annotations:
+- **Inlay Hints** — 9 types of inline annotations:
   - **Type hints** — inferred type shown after `:=` assignments: `x: int := 10`
   - **Parameter name hints** — parameter names shown before arguments in function calls
   - **Range operator hints** — `≤` and `<` shown on `..` range operators to clarify inclusivity
@@ -262,6 +262,8 @@ All LSP intelligence is provided by velvet. This extension wires every capabilit
   - **Enum field value hints** — implicit enum field values shown inline next to each field
   - **Constant type hints** — type shown after constant declarations
   - **Anonymous function return type hints** — inferred return type shown on the closing `}` of anonymous functions with no explicit return type
+  - **Struct field name hints** — when a struct is initialised using positional syntax (no field names), each field name is shown as an inlay hint before its value: `Config{5000, 3}` renders as `Config{ timeout: 5000, retries: 3 }`. Mirrors Rust-analyzer's tuple-struct hints and catches field-order mistakes before the compiler does. Configurable via `enable_struct_field_name_hints`.
+  - **Struct field order hints** — when a fully-keyed struct literal writes fields in a different order from their declaration order, a `⚠` hint appears before the out-of-order field. V's compiler accepts any field order in keyed literals, so this class of mistake is otherwise invisible. Configurable via `enable_struct_field_order_hints`.
 - **Semantic Tokens** — Enhanced syntax highlighting from the LSP layer:
   - Two-pass system for accuracy and performance:
     - Fast syntax-based pass for files over 1000 lines
@@ -288,6 +290,9 @@ All LSP intelligence is provided by velvet. This extension wires every capabilit
   - **Inline Variable** — the inverse of Extract Variable; cursor on `x := <expr>` → replaces every reference to `x` in the enclosing block with `expr` and removes the declaration; only offered when `x` is referenced at least once.
   - **Convert `if`/`else` to `match`** — converts an `if` / `else if` chain whose every branch compares the same subject with `==` into an idiomatic V `match` block; a trailing `else` is preserved as the `match else` arm
   - **Sort imports** — sorts the import block at the top of the file alphabetically without re-formatting anything else; useful as an "organize imports on save" action distinct from running `v fmt`; offered only when two or more imports are present and not already sorted
+  - **Extract Function** — wraps the selected statement(s) into a new `fn` inserted immediately after the enclosing function. velvet infers parameters (outer-scope variables read by the selection) and return values (variables defined inside the selection and used after it). A single return value is returned directly; multiple values are returned as a tuple and unpacked at the call site. Types are resolved from PSI type inference; when a type cannot be determined a `/* T */` placeholder is emitted so the code still compiles after manual fixup. Trigger: select one or more statements and invoke the code-action light-bulb.
+  - **Generate Constructor** — when the cursor is on a struct declaration, generates a `new_<struct_name>(field1 Type1, ...) StructName` factory function inserted directly after the struct's closing brace. Fields with declared default values are omitted from the parameter list. The constructor visibility matches the struct (`pub` struct → `pub fn`). PascalCase struct names are converted to snake_case (e.g. `MyHttpServer` → `new_my_http_server`). Suppressed if a constructor with that name already exists. Trigger: cursor on the struct name, invoke the light-bulb.
+  - **Implement Interface** — when the cursor is on a struct declaration, generates stub method bodies for every method of every interface in the workspace that the struct does not yet implement. Methods the struct already satisfies are skipped. Each stub contains `// TODO: implement`. Trigger: cursor on the struct name, invoke the light-bulb. (Disabled by default in CLion to avoid duplication with the intellij-v plugin — see `enable_implement_interface` under [Feature Toggles](#-feature-toggles).)
   - **Add Missing Match Arms** — when the cursor is inside a `match` expression whose subject is an enum type, detects which variants are not yet covered and inserts stub arms with `// TODO: implement` bodies for each missing one; suppressed when an `else` arm is already present
 
 ---
@@ -607,7 +612,9 @@ All velvet features can be individually enabled or disabled via your Zed `settin
         "enable_implicit_err_hints": true,
         "enable_constant_type_hints": true,
         "enable_enum_field_value_hints": true,
-        "enable_anon_fn_return_type_hints": true
+        "enable_anon_fn_return_type_hints": true,
+        "enable_struct_field_name_hints": true,
+        "enable_struct_field_order_hints": true
       },
       "enable_semantic_tokens": "full",
       "code_lens": {
@@ -618,9 +625,13 @@ All velvet features can be individually enabled or disabled via your Zed `settin
         "enable_run_tests_lens": true
       },
       "inspections": {
-        "enable_unused_parameter_warning": false,
+        "enable_unused_parameter_warning": true,
         "enable_unused_variable_warning": true,
         "enable_unused_import_warning": true
+      },
+      "code_actions": {
+        "enable_make_public": true,
+        "enable_implement_interface": true
       }
     }
   }
@@ -649,16 +660,25 @@ All velvet features can be individually enabled or disabled via your Zed `settin
 | `enable_constant_type_hints` | `true` | Type shown after constant declarations |
 | `enable_enum_field_value_hints` | `true` | Implicit numeric values shown next to enum fields |
 | `enable_anon_fn_return_type_hints` | `true` | Inferred return type on closing `}` of anonymous functions |
+| `enable_struct_field_name_hints` | `true` | Field names shown on positional (un-keyed) struct literals |
+| `enable_struct_field_order_hints` | `true` | `⚠` before fields written out of declaration order in keyed literals |
 
 **`inspections` keys:**
 
 | Key | Default | Description |
 |-----|---------|-------------|
-| `enable_unused_parameter_warning` | `false` | Warn when a parameter is declared but never used in the function body. Parameters prefixed with `_` and all parameters in `test_*` functions are excluded. Disabled by default — set to `true` to enable. |
-| `enable_unused_variable_warning` | `true` | Real-time PSI warning when a local `:=` variable is never referenced. `_`-prefixed names and `test_*` functions excluded. Enabled by default. |
-| `enable_unused_import_warning` | `true` | Real-time PSI warning when an import is never used as `module.symbol`. Selective imports excluded. Enabled by default. |
+| `enable_unused_parameter_warning` | `true` | Warn when a parameter is declared but never used in the function body. Parameters prefixed with `_` and all parameters in `test_*` functions are excluded. |
+| `enable_unused_variable_warning` | `true` | Real-time PSI warning when a local `:=` variable is never referenced. `_`-prefixed names and `test_*` functions excluded. |
+| `enable_unused_import_warning` | `true` | Real-time PSI warning when an import is never used as `module.symbol`. Selective imports excluded. |
 
-Also configurable in `config.toml` under `[inspections]` — see the [velvet configuration docs](https://github.com/DaZhi-the-Revelator/velvet#configuration). Settings supplied via `initialization_options` take precedence over the TOML file.
+**`code_actions` keys:**
+
+| Key | Default | Description |
+|-----|---------|-------------|
+| `enable_make_public` | `true` | Offer the **Make public** refactoring in the code-action light-bulb. Disable in CLion if the intellij-v plugin already provides this natively to avoid a duplicate entry in the menu. |
+| `enable_implement_interface` | `true` | Offer the **Implement interface** code action. Disable in CLion for the same reason as `enable_make_public`. |
+
+Also configurable in `config.toml` under `[inspections]` and `[code_actions]` — see the [velvet configuration docs](https://github.com/DaZhi-the-Revelator/velvet#configuration). Settings supplied via `initialization_options` take precedence over the TOML file.
 
 ---
 
@@ -831,14 +851,27 @@ enable_implicit_err_hints = true
 enable_constant_type_hints = true
 enable_enum_field_value_hints = true
 enable_anon_fn_return_type_hints = true
+# Field names shown before each value in positional (un-keyed) struct literals.
+enable_struct_field_name_hints = true
+# ⚠ hint before fields written out of declaration order in keyed struct literals.
+enable_struct_field_order_hints = true
 
 [inspections]
-# Disabled by default. Set to true to enable.
-enable_unused_parameter_warning = false
+# Warn on parameters never referenced in the function body.
+# Parameters prefixed with _ and test_* functions are excluded.
+enable_unused_parameter_warning = true
 # Real-time PSI-based unused variable warning. Enabled by default.
 enable_unused_variable_warning = true
 # Real-time PSI-based unused import warning. Enabled by default.
 enable_unused_import_warning = true
+
+[code_actions]
+# Offer the "Make public" refactoring as a code action.
+# Disable in CLion when the intellij-v plugin already provides this natively.
+enable_make_public = true
+# Offer the "Implement interface" code action.
+# Disable in CLion for the same reason as enable_make_public.
+enable_implement_interface = true
 ```
 
 A global config also exists at `~/.config/velvet/config.toml` and applies to all projects.
