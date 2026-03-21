@@ -2,7 +2,7 @@
 
 A comprehensive V language extension for [Zed](https://zed.dev/), powered by [velvet](https://github.com/DaZhi-the-Revelator/velvet) with bug fixes, enhanced hover documentation, and correct symbol renaming.
 
-**Supports V 0.5.1. Extension version 0.6.9. Requires velvet 0.4.0+.**
+**Supports V 0.5.1. Extension version0.7.0. Requires velvet 0.4.0+.**
 
 ---
 
@@ -191,7 +191,7 @@ v run shapes.v
 
 Expected output:
 
-```
+```txt
 circle — area: 28.27
 rect — area: 20.00
 parsed radius: 7.5
@@ -234,7 +234,7 @@ Copy-Item .\bin\velvet.exe "$env:USERPROFILE\.config\velvet\bin\velvet.exe"
 
 ```sh
 velvet --version
-# Should print: velvet version 0.4.0
+# Should print: velvet version 0.5.3
 ```
 
 ### Staying Up to Date
@@ -512,6 +512,7 @@ println('length: ${c.length():.4f}')
 ```
 
 Key things to notice:
+
 - **Declarations in Cell 1** (`struct Vec2`, `fn length`, `fn add`) are available in every later cell without re-running them.
 - **`dump()` rows** appear as a formatted HTML table instead of raw `[main.v:N] x = Type(value)` text.
 - **Bare variables** (`a`, `b` in Cell 2) are local to that cell's `fn main()` and do not carry over — Cell 3 demonstrates this with an intentional error and the fix.
@@ -538,7 +539,7 @@ Every time the extension activates (i.e. when you open a `.v` file and the langu
 
 If they differ, a notice appears in the Zed language-server status bar:
 
-> velvet is out of date (local: `0.3.9`, latest release: `0.4.0`). Run: `cd velvet && git pull && v run build.vsh release`, then copy `bin/velvet` to your PATH and restart Zed.
+> velvet is out of date (local: `0.5.2`, latest release: `0.5.3`). Run: `cd velvet && git pull && v run build.vsh release`, then copy `bin/velvet` to your PATH and restart Zed.
 
 If the versions already match, or if the check fails for any reason (no network, API rate limit, etc.), nothing is shown. The check runs at most once per session and never blocks the language server from starting.
 
