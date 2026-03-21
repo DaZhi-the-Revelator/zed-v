@@ -2,7 +2,7 @@
 
 A comprehensive V language extension for [Zed](https://zed.dev/), powered by [velvet](https://github.com/DaZhi-the-Revelator/velvet) with bug fixes, enhanced hover documentation, and correct symbol renaming.
 
-**Supports V 0.5.1. Extension version0.7.0. Requires velvet 0.4.0+.**
+**Supports V 0.5.1. Extension version 0.7.1. Requires velvet 0.4.0+.**
 
 ---
 
