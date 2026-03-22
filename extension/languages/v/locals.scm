@@ -44,17 +44,13 @@
     (identifier) @local.definition))
 
 ; For-loop variables: for x in ...  /  for i, v in ...
-(range_clause
-  left: (var_definition_list
-    (var_definition
-      name: (identifier) @local.definition)))
-
-; Explicit capture for index variable in `for i, v in` loops
-; Guards against scope bleed when field-qualified pattern misses the first sibling
+; A single flat pattern captures all var_definition names under the
+; range_clause's var_definition_list, covering both the index and value
+; variables without double-defining any node.
 (range_clause
   (var_definition_list
     (var_definition
-      (identifier) @local.definition)))
+      name: (identifier) @local.definition)))
 
 ; Function parameters
 (parameter_declaration

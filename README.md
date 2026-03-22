@@ -2,7 +2,7 @@
 
 A comprehensive V language extension for [Zed](https://zed.dev/), powered by [velvet](https://github.com/DaZhi-the-Revelator/velvet) with bug fixes, enhanced hover documentation, and correct symbol renaming.
 
-**Supports V 0.5.1. Extension version 0.7.2. Requires velvet 0.4.0+.**
+**Supports V 0.5.1. Extension version 0.7.3. Requires velvet 0.4.0+.**
 
 ---
 
@@ -1176,6 +1176,17 @@ If `rustup target add wasm32-wasip1` reports *"component 'Rust-std' for target '
 
 - Zed menu → View → Zed Log
 - Look for `velvet` entries to see initialization and request details
+
+---
+
+## Changelog
+
+### Recent refinements
+
+- **`folds.scm`** — Removed the bare `(block) @fold` catch-all that produced duplicate and stacked fold markers on every anonymous block inside expressions. Added specific fold patterns for `function_literal` (closures assigned to variables), `else_branch`, `lock_expression`, `unsafe_expression`, and `defer_statement` blocks so those still fold correctly. Each named construct now folds exactly once.
+- **`locals.scm`** — Consolidated two redundant `range_clause` capture patterns into one. The field-qualified and bare patterns both captured the same `var_definition name:` nodes, causing double-definition entries in the scope tree for `for i, v in` loop variables. The single flat pattern now correctly covers both index and value variables without duplication.
+- **`outline.scm`** — Static methods (declared as `fn Foo.bar() {}`) now capture `@context` from the `static_receiver` name, matching the treatment of regular methods. The breadcrumb bar and outline panel now display `Foo.bar` instead of just `bar`.
+- **`highlights.scm`** — Removed `(array_creation) @punctuation.bracket`. This rule incorrectly colored the entire array-creation expression (e.g. `[]int{}`, `[]string{}`) as punctuation. The individual `[`, `]`, `{`, and `}` tokens are already captured by the bracket token-list pattern above, so array delimiter tokens are still colored correctly.
 
 ---
 

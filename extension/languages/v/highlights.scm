@@ -346,4 +346,7 @@
   "]"
 ] @punctuation.bracket
 
-(array_creation) @punctuation.bracket
+; NOTE: (array_creation) @punctuation.bracket is intentionally absent.
+; array_creation covers the entire expression (e.g. []int{}), not just its
+; delimiters — styling the whole node as a bracket colour is incorrect.
+; The individual [ ] and { } tokens above already cover the delimiter tokens.

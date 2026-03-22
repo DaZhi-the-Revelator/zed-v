@@ -71,7 +71,11 @@
     "{" @open
     "}" @close)) @item
 
+; Static methods (e.g. Foo.bar()) — @context captures the receiver type name
+; so the breadcrumb bar and outline panel display "Foo.bar" instead of just "bar".
 (static_method_declaration
+  receiver: (static_receiver
+    name: (identifier) @context)
   name: (identifier) @name
   body: (block
     "{" @open
